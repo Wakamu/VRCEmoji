@@ -8,6 +8,9 @@ using XamlAnimatedGif;
 using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Diagnostics;
+using SixLabors.ImageSharp.ColorSpaces.Conversion;
+using SixLabors.ImageSharp.ColorSpaces;
+using System.Windows.Media;
 
 namespace VRCEMoji
 {
@@ -16,7 +19,7 @@ namespace VRCEMoji
     /// </summary>
     public partial class MainWindow : Window
     {
-        private SixLabors.ImageSharp.Image img;
+        private SixLabors.ImageSharp.Image<Rgba32> img;
         private int frameCount;
         private System.Windows.Point startPoint;
         private System.Windows.Shapes.Rectangle rect;
@@ -24,6 +27,8 @@ namespace VRCEMoji
         private int delay;
         private int finalFrameCount;
         private int finalDuration;
+        private bool chromaPicker;
+        private Hsv chromaColor;
         public string loadedName;
 
         public MainWindow()
@@ -35,7 +40,32 @@ namespace VRCEMoji
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (this.cropBox.IsChecked == true)
+            if (this.chromaPicker)
+            {
+                System.Windows.Point p = e.GetPosition(canvas);
+                int frameIndex = AnimationBehavior.GetAnimator(originalGif).CurrentFrameIndex;
+                var currentFrame = this.img.Frames[frameIndex];
+                double cropWRatio = (double)256 / currentFrame.Width;
+                double cropHRatio = (double)256 / currentFrame.Height;
+                var rgbColor = currentFrame[Math.Min((int)(p.X / cropWRatio), currentFrame.Width), Math.Min((int)(p.Y / cropHRatio), currentFrame.Height)];
+                chromaColor = ColorSpaceConverter.ToHsv(rgbColor);
+                this.chromaPicker = false;
+                this.chromaButton.Background = new SolidColorBrush(new System.Windows.Media.Color
+                {
+                    A = rgbColor.A,
+                    B = rgbColor.B,
+                    R = rgbColor.R,
+                    G = rgbColor.G
+                });
+                Mouse.OverrideCursor = null;
+                this.chromaButton.IsEnabled = true;
+                this.open.IsEnabled = true;
+                this.generate.IsEnabled = true;
+                this.save.IsEnabled = true;
+                this.chromaBox.IsEnabled = true;
+                AnimationBehavior.GetAnimator(originalGif).Play();
+            }
+            else if (this.cropBox.IsChecked == true)
             {
                 rect = null;
                 canvas.Children.Clear();
@@ -89,7 +119,7 @@ namespace VRCEMoji
                 string filename = dialog.FileName;
                 loadedName = System.IO.Path.GetFileNameWithoutExtension(filename);
                 AnimationBehavior.SetSourceUri(this.originalGif, new Uri(filename));
-                this.img = SixLabors.ImageSharp.Image.Load(filename);
+                this.img = SixLabors.ImageSharp.Image.Load<Rgba32>(filename);
                 frameCount = img.Frames.Count;
                 delay = img.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay * 10;
                 if (delay == 0)
@@ -105,6 +135,7 @@ namespace VRCEMoji
                 this.endSlider.Maximum = frameCount;
                 this.endSlider.Value = frameCount;
                 this.generate.IsEnabled = true;
+                this.chromaBox.IsEnabled = true;
                 this.frameSlider.Value = this.frameSlider.Maximum;
                 label2.Content = "1";
             }
@@ -144,18 +175,20 @@ namespace VRCEMoji
             this.cropBox.IsEnabled = false;
             this.generateLabel.Content = "Generating...";
             this.resultGif.Source = null;
+            int threshold = (int)this.thresholdSlider.Value;
             double cropX = startPoint.X;
             double cropY = startPoint.Y;
             double cropWidth = rect != null ? rect.Width : 0;
             double cropHeight = rect != null ? rect.Height : 0;
+            bool useChroma = this.chromaBox.IsChecked ?? false;
             System.Windows.Shapes.Rectangle rectP = rect;
             lastResult = await Task.Run(() => {
-                SixLabors.ImageSharp.Image[] frames = getFrames(img, startFrame, endFrame);
+                SixLabors.ImageSharp.Image<Rgba32>[] frames = getFrames(img, startFrame, endFrame);
                 frameCount = frames.Length;
                 int toRemove = frameCount - selectedValue;
                 int ratio = toRemove != 0 ? (int)Math.Round((double)frameCount / (double)toRemove) : 0;
                 double realRatio = toRemove != 0 ? ((double)frameCount / (double)toRemove) : 0;
-                SixLabors.ImageSharp.Image[] newFrames = new SixLabors.ImageSharp.Image[selectedValue];
+                SixLabors.ImageSharp.Image<Rgba32>[] newFrames = new SixLabors.ImageSharp.Image<Rgba32>[selectedValue];
                 while (ratio < 2 && ratio != 0)
                 {
                     frames = Divise(frames);
@@ -176,6 +209,10 @@ namespace VRCEMoji
 
                     if (j < newFrames.Length)
                     {
+                        if (useChroma)
+                        {
+                            this.ChromaKey(frames[i], this.chromaColor, threshold);
+                        }
                         if (crop)
                         {
                             double cropWRatio = (double)256 / frames[i].Width;
@@ -252,9 +289,9 @@ namespace VRCEMoji
             this.generateLabel.Content = "";
         }
 
-        public SixLabors.ImageSharp.Image[] Divise(SixLabors.ImageSharp.Image[] list)
+        public SixLabors.ImageSharp.Image<Rgba32>[] Divise(SixLabors.ImageSharp.Image<Rgba32>[] list)
         {
-            List<SixLabors.ImageSharp.Image> newList = new List<SixLabors.ImageSharp.Image>();
+            List<SixLabors.ImageSharp.Image<Rgba32>> newList = new List<SixLabors.ImageSharp.Image<Rgba32>>();
             for (int i = 0; i < list.Length; i++)
             {
                 if (i % 2 != 0)
@@ -268,11 +305,27 @@ namespace VRCEMoji
             return newList.ToArray();
         }
 
-        SixLabors.ImageSharp.Image[] getFrames(SixLabors.ImageSharp.Image originalImg, int frameStart, int frameEnd)
+        void ChromaKey(SixLabors.ImageSharp.Image<Rgba32> image, Hsv chromaColor, int threshold)
+        {
+            for (int i = 0; i<image.Width; i++) {
+                for (int j = 0; j < image.Height; j++) {
+                    Hsv pixelHSV = ColorSpaceConverter.ToHsv(image[i, j]);
+                    float hueDiff = Math.Abs(pixelHSV.H - chromaColor.H);
+                    float satDiff = Math.Abs(pixelHSV.S - chromaColor.S);
+                    float valDiff = Math.Abs(pixelHSV.V - chromaColor.V);
+                    if (hueDiff <= threshold && satDiff <= threshold && valDiff <= threshold)
+                    {
+                        image[i, j] = SixLabors.ImageSharp.Color.Transparent; // Transparent for chroma key pixels
+                    }
+                }
+            }
+        }
+
+        SixLabors.ImageSharp.Image<Rgba32>[] getFrames(SixLabors.ImageSharp.Image<Rgba32> originalImg, int frameStart, int frameEnd)
         {
             int numberOfFrames = originalImg.Frames.Count;
             long[] timePerCall = new long[frameEnd - frameStart + 1];
-            SixLabors.ImageSharp.Image[] frames = new SixLabors.ImageSharp.Image[frameEnd - frameStart + 1];
+            SixLabors.ImageSharp.Image<Rgba32>[] frames = new SixLabors.ImageSharp.Image<Rgba32>[frameEnd - frameStart + 1];
             int j = 0;
             for (int i = 0; i < numberOfFrames; i++)
             {
@@ -357,6 +410,36 @@ namespace VRCEMoji
             {
                 label2_Copy1.Content = frameSlider.Value.ToString();
             }
+        }
+
+        private void chromaButton_Click(object sender, RoutedEventArgs e)
+        {
+            this.chromaPicker = true;
+            this.chromaButton.IsEnabled = false;
+            this.open.IsEnabled = false;
+            this.generate.IsEnabled = false;
+            this.save.IsEnabled = false;
+            this.chromaBox.IsEnabled = false;
+            Mouse.OverrideCursor = Cursors.Cross;
+            AnimationBehavior.GetAnimator(originalGif).Pause();
+        }
+
+        private void chromaBox_Checked(object sender, RoutedEventArgs e)
+        {
+            this.chromaButton.Visibility = Visibility.Visible;
+            this.chromaButton.IsEnabled = true;
+            this.chromaButton.Background = Brushes.Green;
+            this.chromaColor = ColorSpaceConverter.ToHsv(SixLabors.ImageSharp.Color.Green.ToPixel<Rgba32>());
+            this.threshold_label.Visibility = Visibility.Visible;
+            this.thresholdSlider.Visibility = Visibility.Visible;
+        }
+
+        private void chromaBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            this.chromaButton.Visibility = Visibility.Hidden;
+            this.chromaButton.IsEnabled = false;
+            this.threshold_label.Visibility = Visibility.Hidden;
+            this.thresholdSlider.Visibility = Visibility.Hidden;
         }
     }
 
