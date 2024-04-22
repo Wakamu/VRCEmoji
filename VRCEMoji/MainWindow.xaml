@@ -1,0 +1,41 @@
+﻿<Window x:Class="VRCEMoji.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
+        xmlns:local="clr-namespace:VRCEMoji"
+        mc:Ignorable="d"
+        Title="VRCEmoji" Height="642" Width="500" MinWidth="500" MaxWidth="500" MinHeight="642" MaxHeight="642" Background="#FF484747">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="223*"/>
+            <ColumnDefinition Width="266*"/>
+            <ColumnDefinition Width="0*"/>
+        </Grid.ColumnDefinitions>
+        <Button x:Name="open" Content="Open" HorizontalAlignment="Center" Margin="0,22,0,0" VerticalAlignment="Top" Width="108" Click="open_Click" Height="44" Background="#FFC680F9"/>
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center" Height="256" Margin="0,22,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1"/>
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center" Height="256" Margin="0,332,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1">
+            <Label x:Name="generateLabel" Content="" HorizontalAlignment="Center" Height="104" Margin="0,92,0,0" VerticalAlignment="Top" Width="212" FontSize="36"/>
+        </Border>
+        <Image x:Name="originalGif" Grid.Column="1" HorizontalAlignment="Center" Height="256" Margin="0,22,0,0" VerticalAlignment="Top" Width="256" MinWidth="256" MinHeight="256" MaxWidth="256" MaxHeight="256" Stretch="Fill"/>
+        <Canvas Background="Transparent" Height="256" HorizontalAlignment="Center" VerticalAlignment="Top" Width="256" Margin="0,22,0,0" Grid.Column="1" Name="canvas" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove"/>
+        <Label x:Name="frameCountLabel" Content="" HorizontalAlignment="Center" Height="32" VerticalAlignment="Top" Width="246" Grid.Column="1" Foreground="White"/>
+        <Slider x:Name="frameSlider" HorizontalAlignment="Left" Height="55" Margin="59,199,0,0" VerticalAlignment="Top" Width="112" Maximum="1" AutoToolTipPlacement="BottomRight" SmallChange="1" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="frameSlider_ValueChanged" Minimum="1"/>
+        <Button x:Name="generate" Content="Generate" HorizontalAlignment="Left" Height="51" Margin="59,409,0,0" VerticalAlignment="Top" Width="108" Click="generate_Click" IsEnabled="False" Background="#FFBF67FF"/>
+        <Image x:Name="resultGif" HorizontalAlignment="Center" Height="256" Margin="0,332,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1" Stretch="Fill"/>
+
+        <CheckBox x:Name="cropBox" Content="Crop" HorizontalAlignment="Center" Margin="0,254,0,0" VerticalAlignment="Top" Checked="cropBox_Checked" Unchecked="cropBox_Unchecked" Height="15" Width="54" Foreground="White"/>
+        <Button x:Name="save" Content="Save" HorizontalAlignment="Center" Height="84" Margin="0,491,0,0" VerticalAlignment="Top" Width="180" Click="save_Click" IsEnabled="False" Background="#FFBF66FF"/>
+        <Slider x:Name="startSlider" HorizontalAlignment="Left" Height="44" Margin="59,108,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="startSlider_ValueChanged" Minimum="1"/>
+        <Slider x:Name="endSlider" HorizontalAlignment="Left" Height="44" Margin="59,150,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="endSlider_ValueChanged" Minimum="1"/>
+        <Label x:Name="label1" Content="Start:" HorizontalAlignment="Left" Height="37" Margin="10,108,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label1_Copy" Content="End:" HorizontalAlignment="Left" Height="37" Margin="9,150,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label1_Copy1" Content="Frames:" HorizontalAlignment="Left" Height="37" Margin="10,199,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label2" Content="" HorizontalAlignment="Left" Margin="176,108,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
+        <Label x:Name="label2_Copy" Content="" HorizontalAlignment="Left" Margin="176,151,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
+        <Label x:Name="label2_Copy1" Content="" HorizontalAlignment="Left" Margin="176,199,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
+
+
+    </Grid>
+</Window>
