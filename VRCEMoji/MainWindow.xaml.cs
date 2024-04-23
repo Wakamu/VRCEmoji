@@ -222,13 +222,13 @@ namespace VRCEMoji
                                 new System.Drawing.Size((int)(cropWidth / cropWRatio), (int)(cropHeight / cropHRatio))
                             );
                             frames[i].Mutate(
-                                i => i.Crop(new SixLabors.ImageSharp.Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(gridsize, gridsize)    
+                                i => i.Crop(new SixLabors.ImageSharp.Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(gridsize, gridsize, KnownResamplers.Box)
                             );
                         }
                         else
                         {
                             frames[i].Mutate(
-                                i => i.Resize(gridsize, gridsize)
+                                i => i.Resize(gridsize, gridsize, KnownResamplers.Box)
                             );
                         }
                         newFrames[j] = frames[i];
@@ -237,32 +237,28 @@ namespace VRCEMoji
                 }
                 using Image<Rgba32> gif = new(gridsize, gridsize);
                 var gifMetaData = gif.Metadata.GetGifMetadata();
-                int frameDelay = (int)Math.Round(((double)finalDuration / (double)finalFrameCount) / (double)10);
+                int fps = (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount));
+                int frameDelay = (int)Math.Round(((double)1000 / (double)fps)/(double)10);
                 gifMetaData.RepeatCount = 0;
-                gifMetaData.ColorTableMode = GifColorTableMode.Local;
                 GifFrameMetadata metadata = gif.Frames.RootFrame.Metadata.GetGifMetadata();
-                metadata.FrameDelay = frameDelay;
-                metadata.DisposalMethod = GifDisposalMethod.RestoreToBackground;
-                metadata.HasTransparency = true;
                 int maxline = 1024 / gridsize;
                 var result = new SixLabors.ImageSharp.Image<Rgba32>(1024, 1024);
                 int currentFrame = 0;
-                
+
                 foreach (var frame in newFrames)
                 {
-                    var gifFrame = new SixLabors.ImageSharp.Image<Rgba32>(gridsize, gridsize);
-                    gifFrame.Mutate(o => o
-                        .DrawImage(frame, 1f)
-                    );
+                    var gifFrame = frame.Clone();
                     result.Mutate(o => o
                         .DrawImage(frame, new SixLabors.ImageSharp.Point((currentFrame % maxline) * gridsize, (currentFrame / maxline) * gridsize), 1f)
                     );
                     currentFrame++;
                     gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = frameDelay;
-                    gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().DisposalMethod = GifDisposalMethod.RestoreToBackground;
-                    gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().HasTransparency = true;
-                    gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().TransparencyIndex = 0;
-                    gif.Frames.AddFrame(gifFrame.Frames[0]);
+                    if(useChroma)
+                    {
+                        gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().HasTransparency = true;
+                        gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().DisposalMethod = GifDisposalMethod.RestoreToBackground;
+                    }
+                    gif.Frames.AddFrame(gifFrame.Frames.RootFrame);
                     gifFrame.Dispose();
                 }
                 foreach (var frame in frames)
@@ -429,6 +425,7 @@ namespace VRCEMoji
             this.chromaButton.Visibility = Visibility.Visible;
             this.chromaButton.IsEnabled = true;
             this.chromaButton.Background = Brushes.Green;
+            this.thresholdSlider.Value = 30;
             this.chromaColor = ColorSpaceConverter.ToHsv(SixLabors.ImageSharp.Color.Green.ToPixel<Rgba32>());
             this.threshold_label.Visibility = Visibility.Visible;
             this.thresholdSlider.Visibility = Visibility.Visible;
