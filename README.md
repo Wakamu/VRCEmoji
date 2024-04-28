@@ -11,3 +11,4 @@ Converter tool from Gif to VRC compatible spritesheets for animated emojis
 |Automatic naming following VRC's convention|:white_check_mark:||
 |Result preview|:white_check_mark:|Not perfectly accurate to VRC's render
 |Chroma keying|:white_check_mark:|
+|Emoji uploading|:white_check_mark:|
