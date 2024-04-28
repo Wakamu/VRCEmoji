@@ -11,12 +11,16 @@ using SixLabors.ImageSharp.Diagnostics;
 using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.ColorSpaces;
 using System.Windows.Media;
+using VRChat.API.Api;
+using VRChat.API.Client;
+using VRChat.API.Model;
+using VRCEMoji.EmojiApi;
+using System.Diagnostics;
+using VRCEmoji.EmojiApi;
+using Newtonsoft.Json;
 
 namespace VRCEMoji
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         private SixLabors.ImageSharp.Image<Rgba32> img;
@@ -30,12 +34,26 @@ namespace VRCEMoji
         private bool chromaPicker;
         private Hsv chromaColor;
         public string loadedName;
+        private string storagePath;
+        private StoredConfig? storedConfig;
 
         public MainWindow()
         {
             InitializeComponent();
             AnimationBehavior.SetCacheFramesInMemory(this.originalGif, true);
             AnimationBehavior.SetCacheFramesInMemory(this.resultGif, true);
+            var systemPath = System.Environment.
+                             GetFolderPath(
+                                 Environment.SpecialFolder.CommonApplicationData
+                             );
+            storagePath = Path.Combine(systemPath, "VRCEmoji");
+            System.IO.Directory.CreateDirectory(storagePath);
+            this.storedConfig = this.getStoredConfig();
+            if (this.storedConfig != null )
+            {
+                this.loggedLabel.Content = storedConfig.DisplayName;
+                this.logoff.Visibility = Visibility.Visible;
+            }
         }
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
@@ -62,7 +80,9 @@ namespace VRCEMoji
                 this.open.IsEnabled = true;
                 this.generate.IsEnabled = true;
                 this.save.IsEnabled = true;
+                this.upload.IsEnabled = true;
                 this.chromaBox.IsEnabled = true;
+                this.logoff.IsEnabled = true;
                 AnimationBehavior.GetAnimator(originalGif).Play();
             }
             else if (this.cropBox.IsChecked == true)
@@ -136,6 +156,7 @@ namespace VRCEMoji
                 this.endSlider.Value = frameCount;
                 this.generate.IsEnabled = true;
                 this.chromaBox.IsEnabled = true;
+                this.logoff.IsEnabled = true;
                 this.frameSlider.Value = this.frameSlider.Maximum;
                 label2.Content = "1";
             }
@@ -144,16 +165,10 @@ namespace VRCEMoji
 
         private async void generate_Click(object sender, RoutedEventArgs e)
         {
-            var systemPath = System.Environment.
-                             GetFolderPath(
-                                 Environment.SpecialFolder.CommonApplicationData
-                             );
             if (lastResult != null)
             {
                 lastResult.Dispose();
             }
-            var complete = Path.Combine(systemPath, "VRCEmoji");
-            System.IO.Directory.CreateDirectory(complete);
             int startFrame = (int)startSlider.Value - 1;
             int endFrame = (int)endSlider.Value - 1;
             int selectedValue = (int)frameSlider.Value;
@@ -162,17 +177,19 @@ namespace VRCEMoji
             int keptFrames = (int)endSlider.Value - (int)startSlider.Value + 1;
             double durationRatio = (double)frameCount / (double)keptFrames;
             AnimationBehavior.SetSourceUri(this.resultGif, null);
-            System.IO.File.Delete(complete + "\\preview.gif");
+            System.IO.File.Delete(storagePath + "\\preview.gif");
             finalDuration = (int)Math.Round((double)duration / durationRatio);
             finalFrameCount = selectedValue;
             int gridsize = selectedValue <= 4 ? 512 : (selectedValue <= 16 ? 256 : 128);
             this.open.IsEnabled = false;
             this.generate.IsEnabled = false;
             this.save.IsEnabled = false;
+            this.upload.IsEnabled = false;
             this.frameSlider.IsEnabled = false;
             this.startSlider.IsEnabled = false;
             this.endSlider.IsEnabled = false;
             this.cropBox.IsEnabled = false;
+            this.logoff.IsEnabled = false;
             this.generateLabel.Content = "Generating...";
             this.resultGif.Source = null;
             int threshold = (int)this.thresholdSlider.Value;
@@ -270,18 +287,20 @@ namespace VRCEMoji
                     frame.Dispose();
                 }
                 gif.Frames.RemoveFrame(0);
-                gif.SaveAsGif(complete + "\\preview.gif");
+                gif.SaveAsGif(storagePath + "\\preview.gif");
                 gif.Dispose();
                 return result;
             });
-            AnimationBehavior.SetSourceUri(this.resultGif, new Uri(complete + "\\preview.gif"));
+            AnimationBehavior.SetSourceUri(this.resultGif, new Uri(storagePath + "\\preview.gif"));
             this.open.IsEnabled = true;
             this.generate.IsEnabled = true;
             this.save.IsEnabled = true;
+            this.upload.IsEnabled = true;
             this.frameSlider.IsEnabled = true;
             this.startSlider.IsEnabled = true;
             this.endSlider.IsEnabled = true;
             this.cropBox.IsEnabled = true;
+            this.logoff.IsEnabled = true;
             this.generateLabel.Content = "";
         }
 
@@ -311,7 +330,7 @@ namespace VRCEMoji
                     float valDiff = Math.Abs(pixelHSV.V - chromaColor.V);
                     if (hueDiff <= threshold && satDiff <= threshold && valDiff <= threshold)
                     {
-                        image[i, j] = SixLabors.ImageSharp.Color.Transparent; // Transparent for chroma key pixels
+                        image[i, j] = SixLabors.ImageSharp.Color.Transparent;
                     }
                 }
             }
@@ -415,7 +434,9 @@ namespace VRCEMoji
             this.open.IsEnabled = false;
             this.generate.IsEnabled = false;
             this.save.IsEnabled = false;
+            this.upload.IsEnabled = false;
             this.chromaBox.IsEnabled = false;
+            this.logoff.IsEnabled = false;
             Mouse.OverrideCursor = Cursors.Cross;
             AnimationBehavior.GetAnimator(originalGif).Pause();
         }
@@ -437,6 +458,209 @@ namespace VRCEMoji
             this.chromaButton.IsEnabled = false;
             this.threshold_label.Visibility = Visibility.Hidden;
             this.thresholdSlider.Visibility = Visibility.Hidden;
+        }
+
+        static bool requiresEmail2FA(ApiResponse<CurrentUser> resp)
+        {
+            if (resp.RawContent.Contains("emailOtp"))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        static bool isAuthed(ApiResponse<CurrentUser> resp)
+        {
+            if (resp.RawContent.Contains("displayName"))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        private StoredConfig? getStoredConfig()
+        {
+            if (System.IO.File.Exists(this.storagePath + "\\account.json"))
+            {
+                StoredConfig storedConfig = JsonConvert.DeserializeObject<StoredConfig>(System.IO.File.ReadAllText(this.storagePath + "\\account.json"));
+                return storedConfig;
+            }
+            return null;
+        }
+
+        private VRChat.API.Client.Configuration? GetApiConfig()
+        {
+            VRChat.API.Client.Configuration config = new VRChat.API.Client.Configuration();
+            if (this.storedConfig != null)
+            {
+                config.Username = storedConfig.Username;
+                config.Password = storedConfig.Password;
+                config.DefaultHeaders.Add("Cookie", "auth=" + storedConfig.Auth + ";twoFactorAuth=" + storedConfig.TwoKey);
+                config.UserAgent = "VRCEmoji/1.2.0 wakam";
+            } else
+            {
+                LoginDialog loginDialog = new LoginDialog { Owner = this };
+                if (loginDialog.ShowDialog() == true)
+                {
+                    config.Username = loginDialog.Login;
+                    config.Password = loginDialog.Password;
+                    config.UserAgent = "VRCEmoji/1.2.0 wakam";
+                } else
+                {
+                    return null;
+                }
+            }
+            return config;
+        }
+
+        private void CreateStoredConfig(VRChat.API.Client.Configuration config, string auth, string twoKey, string displayName)
+        {
+            System.IO.File.Delete(this.storagePath + "\\account.json");
+            StoredConfig storedConfig = new StoredConfig { 
+                Username = config.Username,
+                Password = config.Password,
+                Auth = auth,
+                TwoKey = twoKey,
+                DisplayName = displayName
+            };
+            System.IO.File.WriteAllText(this.storagePath + "\\account.json", JsonConvert.SerializeObject(storedConfig));
+            this.storedConfig = storedConfig;
+            this.loggedLabel.Content = storedConfig.DisplayName;
+            this.logoff.Visibility = Visibility.Visible;
+        }
+
+        private AuthResult handleAuth()
+        {
+            VRChat.API.Client.Configuration? config = GetApiConfig();
+            AuthResult result = new AuthResult();
+            if (config == null)
+            {
+                return result;
+            }
+            bool logged = false;
+            CustomApiClient client = new CustomApiClient();
+            AuthenticationApi authApi = new AuthenticationApi(client, client, config);
+            try
+            {
+                ApiResponse<CurrentUser> currentUserResp = authApi.GetCurrentUserWithHttpInfo();
+                bool cancelOperation = false;
+                logged = true;
+                if (!isAuthed(currentUserResp) && !cancelOperation)
+                {
+                    if (requiresEmail2FA(currentUserResp))
+                    {
+                        InputDialog inputDialog = new InputDialog("Please verify with the OTP code sent to your email.");
+                        inputDialog.Owner = this;
+                        if (inputDialog.ShowDialog() == true)
+                        {
+                            authApi.Verify2FAEmailCode(new TwoFactorEmailCode(inputDialog.Answer));
+                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
+                        }
+                        else
+                        {
+                            cancelOperation = true;
+                        }
+                    }
+                    else
+                    {
+                        InputDialog inputDialog = new InputDialog("Please verify with your double authentication code.");
+                        inputDialog.Owner = this;
+                        if (inputDialog.ShowDialog() == true)
+                        {
+                            authApi.Verify2FA(new TwoFactorAuthCode(inputDialog.Answer));
+                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
+                        }
+                        else { cancelOperation = true; }
+                    }
+                }
+                if (cancelOperation)
+                {
+                    return result;
+                }
+                var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
+                var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
+                CurrentUser user = (CurrentUser)currentUserResp.Content;
+                if (authCookie != null && f2aCookie != null)
+                {
+                    var auth = authCookie.Value;
+                    var f2a = f2aCookie.Value;
+                    CreateStoredConfig(config, auth, f2a, user.DisplayName);
+                }
+                result.Success = true;
+                result.CurrentUser = user;
+                result.Configuration = config;
+                return result;
+            } catch(ApiException)
+            {
+                result.ErrorMessage = logged ? "An error occured with the two factor authentication.": "Invalid username/password.";
+                return result;
+            }
+        }    
+
+        private void upload_Click(object sender, RoutedEventArgs e)
+        {
+            this.IsEnabled = false;
+            AuthResult authResult = this.handleAuth();
+            if (! authResult.Success)
+            {
+                if (authResult.ErrorMessage != null)
+                {
+                    MessageBox.Show(authResult.ErrorMessage);
+                }
+                this.IsEnabled = true;
+                return;
+            }
+
+            CustomApiClient client = new CustomApiClient();
+            var fileApi = new EmojiApi.EmojiApi(client, client, authResult.Configuration);
+            try
+            {
+                List<EmojiFile> files = fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0);
+                UploadDialog uploadDialog = new UploadDialog();
+                uploadDialog.Owner = this;
+                if (uploadDialog.ShowDialog() == false)
+                {
+                    this.IsEnabled = true;
+                    return;
+                }
+                UploadSettings uploadSettings = uploadDialog.Settings;
+                if (files.Count >= 9)
+                {
+                    ReplaceDialog replaceDialog = new ReplaceDialog(files);
+                    replaceDialog.Owner = this;
+                    if (replaceDialog.ShowDialog() == true)
+                    {
+                        fileApi.DeleteFile(replaceDialog.SelectedId);
+                    } else
+                    {
+                        this.IsEnabled = true;
+                        return;
+                    }
+                }
+                int fps = (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount));
+                CreateEmojiRequest request = new(finalFrameCount, fps, this.lastResult);
+                request.Name = loadedName + "_" + finalFrameCount + "frames_" + (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount)) + "fps.png";
+                request.Extension = ".png";
+                request.AnimationStyle = uploadSettings.AnimationStyle;
+                request.LoopStyle = uploadSettings.LoopStyle;
+                fileApi.CreateEmoji(this.lastResult, loadedName + "_" + finalFrameCount + "frames_" + (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount)) + "fps.png", request);
+                MessageBox.Show("Emoji uploaded successfully!");
+            }
+            catch (ApiException ex)
+            {
+                MessageBox.Show(ex.Message, "Error");
+            }
+            this.IsEnabled = true;
+        }
+
+        private void logoff_Click(object sender, RoutedEventArgs e)
+        {
+            System.IO.File.Delete(this.storagePath + "\\account.json");
+            this.storedConfig = null;
+            this.loggedLabel.Content = "Not logged in";
+            this.logoff.Visibility = Visibility.Hidden;
         }
     }
 

@@ -6,39 +6,42 @@
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:local="clr-namespace:VRCEMoji"
         mc:Ignorable="d"
-        Title="VRCEmoji" Height="642" Width="500" MinWidth="500" MaxWidth="500" MinHeight="642" MaxHeight="642" Background="#FF484747">
+        ResizeMode="NoResize" Title="VRCEmoji" Height="642" Width="500" MinWidth="500" MaxWidth="500" MinHeight="700" MaxHeight="700" Background="#FF484747">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="223*"/>
             <ColumnDefinition Width="266*"/>
             <ColumnDefinition Width="0*"/>
         </Grid.ColumnDefinitions>
-        <Button x:Name="open" Content="Open" HorizontalAlignment="Center" Margin="0,22,0,0" VerticalAlignment="Top" Width="108" Click="open_Click" Height="44" Background="#FFC680F9"/>
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center" Height="256" Margin="0,22,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1"/>
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Center" Height="256" Margin="0,332,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1">
+        <Button x:Name="open" Content="Open" HorizontalAlignment="Left" Margin="51,86,0,0" VerticalAlignment="Top" Width="108" Click="open_Click" Height="44" Background="#FFC680F9"/>
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="256" Margin="227,86,0,0" VerticalAlignment="Top" Width="256" Grid.ColumnSpan="2"/>
+        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="256" Margin="227,396,0,0" VerticalAlignment="Top" Width="256" Grid.ColumnSpan="2">
             <Label x:Name="generateLabel" Content="" HorizontalAlignment="Center" Height="104" Margin="0,92,0,0" VerticalAlignment="Top" Width="212" FontSize="36"/>
         </Border>
-        <Image x:Name="originalGif" Grid.Column="1" HorizontalAlignment="Center" Height="256" Margin="0,22,0,0" VerticalAlignment="Top" Width="256" MinWidth="256" MinHeight="256" MaxWidth="256" MaxHeight="256" Stretch="Fill"/>
-        <Canvas Background="Transparent" Height="256" HorizontalAlignment="Center" VerticalAlignment="Top" Width="256" Margin="0,22,0,0" Grid.Column="1" Name="canvas" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove"/>
-        <Label x:Name="frameCountLabel" Content="" HorizontalAlignment="Center" Height="32" VerticalAlignment="Top" Width="246" Grid.Column="1" Foreground="White"/>
-        <Slider x:Name="frameSlider" HorizontalAlignment="Left" Height="37" Margin="63,169,0,0" VerticalAlignment="Top" Width="112" Maximum="1" AutoToolTipPlacement="BottomRight" SmallChange="1" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="frameSlider_ValueChanged" Minimum="1"/>
-        <Button x:Name="generate" Content="Generate" HorizontalAlignment="Left" Height="51" Margin="59,409,0,0" VerticalAlignment="Top" Width="108" Click="generate_Click" IsEnabled="False" Background="#FFBF67FF"/>
-        <Image x:Name="resultGif" HorizontalAlignment="Center" Height="256" Margin="0,332,0,0" VerticalAlignment="Top" Width="256" Grid.Column="1" Stretch="Fill"/>
+        <Image x:Name="originalGif" HorizontalAlignment="Left" Height="256" Margin="227,86,0,0" VerticalAlignment="Top" Width="256" MinWidth="256" MinHeight="256" MaxWidth="256" MaxHeight="256" Stretch="Fill" Grid.ColumnSpan="2"/>
+        <Canvas Background="Transparent" Height="256" HorizontalAlignment="Left" VerticalAlignment="Top" Width="256" Margin="227,86,0,0" Name="canvas" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" Grid.ColumnSpan="2"/>
+        <Label x:Name="frameCountLabel" Content="" HorizontalAlignment="Left" Height="32" VerticalAlignment="Top" Width="246" Grid.Column="1" Foreground="White" Margin="4,64,0,0"/>
+        <Slider x:Name="frameSlider" HorizontalAlignment="Left" Height="37" Margin="54,233,0,0" VerticalAlignment="Top" Width="112" Maximum="1" AutoToolTipPlacement="BottomRight" SmallChange="1" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="frameSlider_ValueChanged" Minimum="1"/>
+        <Button x:Name="generate" Content="Generate" HorizontalAlignment="Left" Height="52" Margin="50,416,0,0" VerticalAlignment="Top" Width="108" Click="generate_Click" IsEnabled="False" Background="#FFBF67FF"/>
+        <Image x:Name="resultGif" HorizontalAlignment="Left" Height="256" Margin="227,396,0,0" VerticalAlignment="Top" Width="256" Stretch="Fill" Grid.ColumnSpan="2"/>
 
-        <CheckBox x:Name="cropBox" Content="Crop" HorizontalAlignment="Left" Margin="61,210,0,0" VerticalAlignment="Top" Checked="cropBox_Checked" Unchecked="cropBox_Unchecked" Height="15" Width="54" Foreground="White"/>
-        <CheckBox x:Name="chromaBox" Content="ChromaKey" HorizontalAlignment="Left" Margin="61,240,0,0" VerticalAlignment="Top" Height="15" Width="84" Foreground="White" Checked="chromaBox_Checked" Unchecked="chromaBox_Unchecked" IsEnabled="False"/>
-        <Button x:Name="save" Content="Save" HorizontalAlignment="Center" Height="84" Margin="0,491,0,0" VerticalAlignment="Top" Width="180" Click="save_Click" IsEnabled="False" Background="#FFBF66FF"/>
-        <Slider x:Name="startSlider" HorizontalAlignment="Left" Height="44" Margin="63,78,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="startSlider_ValueChanged" Minimum="1"/>
-        <Slider x:Name="endSlider" HorizontalAlignment="Left" Height="44" Margin="63,120,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="endSlider_ValueChanged" Minimum="1"/>
-        <Label x:Name="label1" Content="Start:" HorizontalAlignment="Left" Height="37" Margin="15,78,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label1_Copy" Content="End:" HorizontalAlignment="Left" Height="37" Margin="14,120,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label1_Copy1" Content="Frames:" HorizontalAlignment="Left" Height="37" Margin="15,169,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label2" Content="" HorizontalAlignment="Left" Margin="181,78,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
-        <Label x:Name="label2_Copy" Content="" HorizontalAlignment="Left" Margin="181,121,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
-        <Label x:Name="label2_Copy1" Content="" HorizontalAlignment="Left" Margin="181,169,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
-        <Button x:Name="chromaButton" Content="" HorizontalAlignment="Left" Height="25" Margin="150,235,0,0" VerticalAlignment="Top" Width="23" Background="Lime" Foreground="Lime" Click="chromaButton_Click" IsEnabled="False" Visibility="Hidden"/>
-        <Slider x:Name="thresholdSlider" HorizontalAlignment="Left" Height="30" Margin="81,274,0,0" VerticalAlignment="Top" Width="112" Maximum="100" AutoToolTipPlacement="BottomRight" Value="30" SmallChange="1" IsSnapToTickEnabled="True" Visibility="Hidden"/>
-        <Label x:Name="threshold_label" Content="Threshold:" HorizontalAlignment="Left" Height="37" Margin="15,267,0,0" VerticalAlignment="Top" Width="66" Foreground="White" Visibility="Hidden"/>
+        <CheckBox x:Name="cropBox" Content="Crop" HorizontalAlignment="Left" Margin="52,274,0,0" VerticalAlignment="Top" Checked="cropBox_Checked" Unchecked="cropBox_Unchecked" Height="14" Width="54" Foreground="White"/>
+        <CheckBox x:Name="chromaBox" Content="ChromaKey" HorizontalAlignment="Left" Margin="52,304,0,0" VerticalAlignment="Top" Height="14" Width="84" Foreground="White" Checked="chromaBox_Checked" Unchecked="chromaBox_Unchecked" IsEnabled="False"/>
+        <Button x:Name="save" Content="Save" HorizontalAlignment="Left" Height="56" Margin="15,490,0,0" VerticalAlignment="Top" Width="180" Click="save_Click" IsEnabled="False" Background="#FFBF66FF"/>
+        <Slider x:Name="startSlider" HorizontalAlignment="Left" Height="44" Margin="54,142,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="startSlider_ValueChanged" Minimum="1"/>
+        <Slider x:Name="endSlider" HorizontalAlignment="Left" Height="44" Margin="54,184,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="endSlider_ValueChanged" Minimum="1"/>
+        <Label x:Name="label1" Content="Start:" HorizontalAlignment="Left" Height="37" Margin="6,142,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label1_Copy" Content="End:" HorizontalAlignment="Left" Height="37" Margin="5,184,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label1_Copy1" Content="Frames:" HorizontalAlignment="Left" Height="37" Margin="6,233,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label2" Content="" HorizontalAlignment="Left" Margin="172,142,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
+        <Label x:Name="label2_Copy" Content="" HorizontalAlignment="Left" Margin="172,185,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
+        <Label x:Name="label2_Copy1" Content="" HorizontalAlignment="Left" Margin="172,233,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
+        <Button x:Name="chromaButton" Content="" HorizontalAlignment="Left" Height="25" Margin="143,301,0,0" VerticalAlignment="Top" Width="23" Background="Lime" Foreground="Lime" Click="chromaButton_Click" IsEnabled="False" Visibility="Hidden"/>
+        <Slider x:Name="thresholdSlider" HorizontalAlignment="Left" Height="30" Margin="71,342,0,0" VerticalAlignment="Top" Width="112" Maximum="100" AutoToolTipPlacement="BottomRight" Value="30" SmallChange="1" IsSnapToTickEnabled="True" Visibility="Hidden"/>
+        <Label x:Name="threshold_label" Content="Threshold:" HorizontalAlignment="Left" Height="37" Margin="5,335,0,0" VerticalAlignment="Top" Width="66" Foreground="White" Visibility="Hidden"/>
+        <Button x:Name="upload" Content="Upload" HorizontalAlignment="Left" Height="56" Margin="15,570,0,0" VerticalAlignment="Top" Width="180" Click="upload_Click" IsEnabled="False" Background="#FFBF66FF"/>
+        <Label x:Name="loggedLabel" Content="Not logged in" HorizontalAlignment="Left" Height="28" Margin="6,10,0,0" VerticalAlignment="Top" Width="132" Foreground="White"/>
+        <Button x:Name="logoff" Content="Logout" HorizontalAlignment="Left" Height="28" Margin="143,10,0,0" VerticalAlignment="Top" Width="84" Background="#FFC680F9" Click="logoff_Click" Visibility="Hidden"/>
 
 
     </Grid>

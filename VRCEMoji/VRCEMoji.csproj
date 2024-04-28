@@ -10,8 +10,69 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Images\aura.gif" />
+    <None Remove="Images\bats.gif" />
+    <None Remove="Images\bees.gif" />
+    <None Remove="Images\bounce.gif" />
+    <None Remove="Images\cloud.gif" />
+    <None Remove="Images\confetti.gif" />
+    <None Remove="Images\crying.gif" />
+    <None Remove="Images\dislike.gif" />
+    <None Remove="Images\fire.gif" />
+    <None Remove="Images\idea.gif" />
+    <None Remove="Images\lasers.gif" />
+    <None Remove="Images\like.gif" />
+    <None Remove="Images\magnet.gif" />
+    <None Remove="Images\mistletoe.gif" />
+    <None Remove="Images\money.gif" />
+    <None Remove="Images\noise.gif" />
+    <None Remove="Images\orbit.gif" />
+    <None Remove="Images\pizza.gif" />
+    <None Remove="Images\rain.gif" />
+    <None Remove="Images\rotate.gif" />
+    <None Remove="Images\shake.gif" />
+    <None Remove="Images\snow.gif" />
+    <None Remove="Images\snowball.gif" />
+    <None Remove="Images\spin.gif" />
+    <None Remove="Images\splash.gif" />
+    <None Remove="Images\stop.gif" />
+    <None Remove="Images\zzz.gif" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.4" />
+    <PackageReference Include="VRChat.API" Version="1.17.2" />
     <PackageReference Include="XamlAnimatedGif" Version="2.2.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Images\aura.gif" />
+    <Resource Include="Images\bats.gif" />
+    <Resource Include="Images\bees.gif" />
+    <Resource Include="Images\bounce.gif" />
+    <Resource Include="Images\cloud.gif" />
+    <Resource Include="Images\confetti.gif" />
+    <Resource Include="Images\crying.gif" />
+    <Resource Include="Images\dislike.gif" />
+    <Resource Include="Images\fire.gif" />
+    <Resource Include="Images\idea.gif" />
+    <Resource Include="Images\lasers.gif" />
+    <Resource Include="Images\like.gif" />
+    <Resource Include="Images\magnet.gif" />
+    <Resource Include="Images\mistletoe.gif" />
+    <Resource Include="Images\money.gif" />
+    <Resource Include="Images\noise.gif" />
+    <Resource Include="Images\orbit.gif" />
+    <Resource Include="Images\pizza.gif" />
+    <Resource Include="Images\rain.gif" />
+    <Resource Include="Images\rotate.gif" />
+    <Resource Include="Images\shake.gif" />
+    <Resource Include="Images\snow.gif" />
+    <Resource Include="Images\snowball.gif" />
+    <Resource Include="Images\spin.gif" />
+    <Resource Include="Images\splash.gif" />
+    <Resource Include="Images\stop.gif" />
+    <Resource Include="Images\zzz.gif" />
   </ItemGroup>
 
 </Project>
