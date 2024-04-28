@@ -493,12 +493,12 @@ namespace VRCEMoji
         private VRChat.API.Client.Configuration? GetApiConfig()
         {
             VRChat.API.Client.Configuration config = new VRChat.API.Client.Configuration();
+            config.UserAgent = "VRCEmoji/1.2.0 wakamu";
             if (this.storedConfig != null)
             {
                 config.Username = storedConfig.Username;
                 config.Password = storedConfig.Password;
                 config.DefaultHeaders.Add("Cookie", "auth=" + storedConfig.Auth + ";twoFactorAuth=" + storedConfig.TwoKey);
-                config.UserAgent = "VRCEmoji/1.2.0 wakam";
             } else
             {
                 LoginDialog loginDialog = new LoginDialog { Owner = this };
@@ -506,7 +506,6 @@ namespace VRCEMoji
                 {
                     config.Username = loginDialog.Login;
                     config.Password = loginDialog.Password;
-                    config.UserAgent = "VRCEmoji/1.2.0 wakam";
                 } else
                 {
                     return null;
