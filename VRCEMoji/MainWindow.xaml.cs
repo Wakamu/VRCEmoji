@@ -15,25 +15,25 @@ using VRChat.API.Api;
 using VRChat.API.Client;
 using VRChat.API.Model;
 using VRCEMoji.EmojiApi;
-using System.Diagnostics;
 using VRCEmoji.EmojiApi;
 using Newtonsoft.Json;
+using System.Runtime.Serialization;
 
 namespace VRCEMoji
 {
     public partial class MainWindow : Window
     {
-        private SixLabors.ImageSharp.Image<Rgba32> img;
+        private SixLabors.ImageSharp.Image<Rgba32>? img;
         private int frameCount;
         private System.Windows.Point startPoint;
-        private System.Windows.Shapes.Rectangle rect;
-        private SixLabors.ImageSharp.Image lastResult;
+        private System.Windows.Shapes.Rectangle? rect;
+        private SixLabors.ImageSharp.Image? lastResult;
         private int delay;
         private int finalFrameCount;
         private int finalDuration;
         private bool chromaPicker;
-        private Hsv chromaColor;
-        public string loadedName;
+        private Rgba32 chromaColor;
+        public string? loadedName;
         private string storagePath;
         private StoredConfig? storedConfig;
 
@@ -54,11 +54,12 @@ namespace VRCEMoji
                 this.loggedLabel.Content = storedConfig.DisplayName;
                 this.logoff.Visibility = Visibility.Visible;
             }
+            chromaTypeBox.ItemsSource = Enum.GetValues(typeof(ChromaType)).Cast<ChromaType>();
         }
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (this.chromaPicker)
+            if (this.chromaPicker && this.img != null)
             {
                 System.Windows.Point p = e.GetPosition(canvas);
                 int frameIndex = AnimationBehavior.GetAnimator(originalGif).CurrentFrameIndex;
@@ -66,7 +67,7 @@ namespace VRCEMoji
                 double cropWRatio = (double)256 / currentFrame.Width;
                 double cropHRatio = (double)256 / currentFrame.Height;
                 var rgbColor = currentFrame[Math.Min((int)(p.X / cropWRatio), currentFrame.Width), Math.Min((int)(p.Y / cropHRatio), currentFrame.Height)];
-                chromaColor = ColorSpaceConverter.ToHsv(rgbColor);
+                chromaColor = rgbColor;
                 this.chromaPicker = false;
                 this.chromaButton.Background = new SolidColorBrush(new System.Windows.Media.Color
                 {
@@ -122,7 +123,8 @@ namespace VRCEMoji
 
                 Canvas.SetLeft(rect, x);
                 Canvas.SetTop(rect, y);
-            }        }
+            }
+        }
 
         private void open_Click(object sender, RoutedEventArgs e)
         {
@@ -165,6 +167,10 @@ namespace VRCEMoji
 
         private async void generate_Click(object sender, RoutedEventArgs e)
         {
+            if (this.img is null)
+            {
+                return;
+            }
             if (lastResult != null)
             {
                 lastResult.Dispose();
@@ -198,7 +204,7 @@ namespace VRCEMoji
             double cropWidth = rect != null ? rect.Width : 0;
             double cropHeight = rect != null ? rect.Height : 0;
             bool useChroma = this.chromaBox.IsChecked ?? false;
-            System.Windows.Shapes.Rectangle rectP = rect;
+            ChromaType chromaType = (ChromaType)this.chromaTypeBox.SelectedItem;
             lastResult = await Task.Run(() => {
                 SixLabors.ImageSharp.Image<Rgba32>[] frames = getFrames(img, startFrame, endFrame);
                 frameCount = frames.Length;
@@ -228,7 +234,7 @@ namespace VRCEMoji
                     {
                         if (useChroma)
                         {
-                            this.ChromaKey(frames[i], this.chromaColor, threshold);
+                            this.ChromaKey(frames[i], this.chromaColor, threshold, chromaType);
                         }
                         if (crop)
                         {
@@ -320,15 +326,37 @@ namespace VRCEMoji
             return newList.ToArray();
         }
 
-        void ChromaKey(SixLabors.ImageSharp.Image<Rgba32> image, Hsv chromaColor, int threshold)
+        void ChromaKey(SixLabors.ImageSharp.Image<Rgba32> image, Rgba32 chromaColor, int threshold, ChromaType chromaType)
         {
-            for (int i = 0; i<image.Width; i++) {
-                for (int j = 0; j < image.Height; j++) {
-                    Hsv pixelHSV = ColorSpaceConverter.ToHsv(image[i, j]);
-                    float hueDiff = Math.Abs(pixelHSV.H - chromaColor.H);
-                    float satDiff = Math.Abs(pixelHSV.S - chromaColor.S);
-                    float valDiff = Math.Abs(pixelHSV.V - chromaColor.V);
-                    if (hueDiff <= threshold && satDiff <= threshold && valDiff <= threshold)
+            if (chromaType == ChromaType.HSV)
+            {
+                Hsv targetColor = ColorSpaceConverter.ToHsv(chromaColor);
+                for (int i = 0; i < image.Width; i++)
+                {
+                    for (int j = 0; j < image.Height; j++)
+                    {
+                        Hsv pixelHSV = ColorSpaceConverter.ToHsv(image[i, j]);
+                        float hueDiff = Math.Abs(pixelHSV.H - targetColor.H);
+                        float satDiff = Math.Abs(pixelHSV.S - targetColor.S);
+                        float valDiff = Math.Abs(pixelHSV.V - targetColor.V);
+                        if (hueDiff <= threshold && satDiff <= threshold && valDiff <= threshold)
+                        {
+                            image[i, j] = SixLabors.ImageSharp.Color.Transparent;
+                        }
+                    }
+                }
+                return;
+            }
+            for (int i = 0; i < image.Width; i++)
+            {
+                for (int j = 0; j < image.Height; j++)
+                {
+                    Rgba32 pixelRGB = image[i, j];
+                    int rgbDiff = 
+                        Math.Abs(pixelRGB.R - chromaColor.R) +
+                        Math.Abs(pixelRGB.G - chromaColor.G) +
+                        Math.Abs(pixelRGB.B - chromaColor.B);
+                    if (rgbDiff <= threshold)
                     {
                         image[i, j] = SixLabors.ImageSharp.Color.Transparent;
                     }
@@ -447,9 +475,11 @@ namespace VRCEMoji
             this.chromaButton.IsEnabled = true;
             this.chromaButton.Background = Brushes.Green;
             this.thresholdSlider.Value = 30;
-            this.chromaColor = ColorSpaceConverter.ToHsv(SixLabors.ImageSharp.Color.Green.ToPixel<Rgba32>());
+            this.chromaColor = SixLabors.ImageSharp.Color.Green.ToPixel<Rgba32>();
             this.threshold_label.Visibility = Visibility.Visible;
             this.thresholdSlider.Visibility = Visibility.Visible;
+            this.chromaTypeLabel.Visibility = Visibility.Visible;
+            this.chromaTypeBox.Visibility = Visibility.Visible;
         }
 
         private void chromaBox_Unchecked(object sender, RoutedEventArgs e)
@@ -458,6 +488,8 @@ namespace VRCEMoji
             this.chromaButton.IsEnabled = false;
             this.threshold_label.Visibility = Visibility.Hidden;
             this.thresholdSlider.Visibility = Visibility.Hidden;
+            this.chromaTypeLabel.Visibility = Visibility.Hidden;
+            this.chromaTypeBox.Visibility = Visibility.Hidden;
         }
 
         static bool requiresEmail2FA(ApiResponse<CurrentUser> resp)
@@ -484,7 +516,7 @@ namespace VRCEMoji
         {
             if (System.IO.File.Exists(this.storagePath + "\\account.json"))
             {
-                StoredConfig storedConfig = JsonConvert.DeserializeObject<StoredConfig>(System.IO.File.ReadAllText(this.storagePath + "\\account.json"));
+                StoredConfig? storedConfig = JsonConvert.DeserializeObject<StoredConfig>(System.IO.File.ReadAllText(this.storagePath + "\\account.json"));
                 return storedConfig;
             }
             return null;
@@ -602,7 +634,7 @@ namespace VRCEMoji
         {
             this.IsEnabled = false;
             AuthResult authResult = this.handleAuth();
-            if (! authResult.Success)
+            if ((! authResult.Success) || authResult.Configuration is null ||authResult.CurrentUser is null || this.lastResult is null)
             {
                 if (authResult.ErrorMessage != null)
                 {
@@ -661,6 +693,19 @@ namespace VRCEMoji
             this.loggedLabel.Content = "Not logged in";
             this.logoff.Visibility = Visibility.Hidden;
         }
+
+        private void Window_ContentRendered(object sender, EventArgs e)
+        {
+            chromaTypeBox.SelectedIndex = 0;
+        }
     }
 
+    public enum ChromaType
+    {
+        [EnumMember(Value = "hsv")]
+        HSV = 1,
+
+        [EnumMember(Value = "rgb")]
+        RGB = 2,
+    }
 }

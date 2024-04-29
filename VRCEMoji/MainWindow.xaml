@@ -6,7 +6,7 @@
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
         xmlns:local="clr-namespace:VRCEMoji"
         mc:Ignorable="d"
-        ResizeMode="NoResize" Title="VRCEmoji" Height="642" Width="500" MinWidth="500" MaxWidth="500" MinHeight="700" MaxHeight="700" Background="#FF484747">
+        ResizeMode="NoResize" Title="VRCEmoji" Height="642" Width="500" MinWidth="500" MaxWidth="500" MinHeight="700" MaxHeight="700" Background="#FF484747" ContentRendered="Window_ContentRendered">
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="223*"/>
@@ -37,11 +37,13 @@
         <Label x:Name="label2_Copy" Content="" HorizontalAlignment="Left" Margin="172,185,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
         <Label x:Name="label2_Copy1" Content="" HorizontalAlignment="Left" Margin="172,233,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
         <Button x:Name="chromaButton" Content="" HorizontalAlignment="Left" Height="25" Margin="143,301,0,0" VerticalAlignment="Top" Width="23" Background="Lime" Foreground="Lime" Click="chromaButton_Click" IsEnabled="False" Visibility="Hidden"/>
-        <Slider x:Name="thresholdSlider" HorizontalAlignment="Left" Height="30" Margin="71,342,0,0" VerticalAlignment="Top" Width="112" Maximum="100" AutoToolTipPlacement="BottomRight" Value="30" SmallChange="1" IsSnapToTickEnabled="True" Visibility="Hidden"/>
-        <Label x:Name="threshold_label" Content="Threshold:" HorizontalAlignment="Left" Height="37" Margin="5,335,0,0" VerticalAlignment="Top" Width="66" Foreground="White" Visibility="Hidden"/>
+        <Slider x:Name="thresholdSlider" HorizontalAlignment="Left" Height="30" Margin="71,366,0,0" VerticalAlignment="Top" Width="112" Maximum="100" AutoToolTipPlacement="BottomRight" Value="30" SmallChange="1" IsSnapToTickEnabled="True" Visibility="Hidden"/>
+        <Label x:Name="threshold_label" Content="Threshold:" HorizontalAlignment="Left" Height="37" Margin="5,359,0,0" VerticalAlignment="Top" Width="66" Foreground="White" Visibility="Hidden"/>
         <Button x:Name="upload" Content="Upload" HorizontalAlignment="Left" Height="56" Margin="15,570,0,0" VerticalAlignment="Top" Width="180" Click="upload_Click" IsEnabled="False" Background="#FFBF66FF"/>
         <Label x:Name="loggedLabel" Content="Not logged in" HorizontalAlignment="Left" Height="28" Margin="6,10,0,0" VerticalAlignment="Top" Width="132" Foreground="White"/>
         <Button x:Name="logoff" Content="Logout" HorizontalAlignment="Left" Height="28" Margin="143,10,0,0" VerticalAlignment="Top" Width="84" Background="#FFC680F9" Click="logoff_Click" Visibility="Hidden"/>
+        <Label x:Name="chromaTypeLabel" Content="Type:" HorizontalAlignment="Left" Height="28" Margin="6,326,0,0" VerticalAlignment="Top" Width="61" Foreground="White" Visibility="Hidden"/>
+        <ComboBox x:Name="chromaTypeBox" HorizontalAlignment="Left" Height="22" Margin="72,329,0,0" VerticalAlignment="Top" Width="111" Visibility="Hidden"/>
 
 
     </Grid>
