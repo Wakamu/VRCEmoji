@@ -1,69 +1,52 @@
 ﻿using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
-using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using XamlAnimatedGif;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Diagnostics;
-using SixLabors.ImageSharp.ColorSpaces.Conversion;
-using SixLabors.ImageSharp.ColorSpaces;
 using System.Windows.Media;
-using VRChat.API.Api;
 using VRChat.API.Client;
-using VRChat.API.Model;
 using VRCEMoji.EmojiApi;
 using VRCEmoji.EmojiApi;
-using Newtonsoft.Json;
 using System.Runtime.Serialization;
+using VRCEMoji.EmojiGeneration;
 
 namespace VRCEMoji
 {
     public partial class MainWindow : Window
     {
-        private SixLabors.ImageSharp.Image<Rgba32>? img;
-        private int frameCount;
+        private GenerationSettings? generationSettings;
         private System.Windows.Point startPoint;
         private System.Windows.Shapes.Rectangle? rect;
-        private SixLabors.ImageSharp.Image? lastResult;
-        private int delay;
-        private int finalFrameCount;
-        private int finalDuration;
+        private GenerationResult? generationResult;
         private bool chromaPicker;
         private Rgba32 chromaColor;
         public string? loadedName;
-        private string storagePath;
-        private StoredConfig? storedConfig;
+        private static MainWindow? _instance;
 
         public MainWindow()
         {
             InitializeComponent();
             AnimationBehavior.SetCacheFramesInMemory(this.originalGif, true);
-            AnimationBehavior.SetCacheFramesInMemory(this.resultGif, true);
-            var systemPath = System.Environment.
-                             GetFolderPath(
-                                 Environment.SpecialFolder.CommonApplicationData
-                             );
-            storagePath = Path.Combine(systemPath, "VRCEmoji");
-            System.IO.Directory.CreateDirectory(storagePath);
-            this.storedConfig = this.getStoredConfig();
-            if (this.storedConfig != null )
+            StoredConfig? authConfig = Authentication.Instance.StoredConfig;
+            if (authConfig != null )
             {
-                this.loggedLabel.Content = storedConfig.DisplayName;
+                this.loggedLabel.Content = authConfig.DisplayName;
                 this.logoff.Visibility = Visibility.Visible;
             }
             chromaTypeBox.ItemsSource = Enum.GetValues(typeof(ChromaType)).Cast<ChromaType>();
+            _instance = this;
         }
+
+        public static MainWindow? Instance { get { return _instance; } }
 
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            if (this.chromaPicker && this.img != null)
+            if (this.chromaPicker && this.generationSettings != null)
             {
                 System.Windows.Point p = e.GetPosition(canvas);
                 int frameIndex = AnimationBehavior.GetAnimator(originalGif).CurrentFrameIndex;
-                var currentFrame = this.img.Frames[frameIndex];
+                var currentFrame = this.generationSettings.Image.Frames[frameIndex];
                 double cropWRatio = (double)256 / currentFrame.Width;
                 double cropHRatio = (double)256 / currentFrame.Height;
                 var rgbColor = currentFrame[Math.Min((int)(p.X / cropWRatio), currentFrame.Width), Math.Min((int)(p.Y / cropHRatio), currentFrame.Height)];
@@ -94,7 +77,7 @@ namespace VRCEMoji
 
                 rect = new System.Windows.Shapes.Rectangle
                 {
-                    Stroke = System.Windows.Media.Brushes.LightBlue,
+                    Stroke = Brushes.LightBlue,
                     StrokeThickness = 2
                 };
                 Canvas.SetLeft(rect, startPoint.X);
@@ -128,264 +111,72 @@ namespace VRCEMoji
 
         private void open_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Microsoft.Win32.OpenFileDialog();
-            dialog.FileName = "Image";
-            dialog.DefaultExt = ".gif";
-            dialog.Filter = "Gif (.gif)|*.gif";
+            var dialog = new Microsoft.Win32.OpenFileDialog
+            {
+                FileName = "Image",
+                DefaultExt = ".gif",
+                Filter = "Gif (.gif)|*.gif"
+            };
             bool? result = dialog.ShowDialog();
             if (result == true)
             {
-                if (this.img != null) {
-                    this.img.Dispose();
-                }   
+                this.generationSettings?.Dispose();   
                 string filename = dialog.FileName;
                 loadedName = System.IO.Path.GetFileNameWithoutExtension(filename);
                 AnimationBehavior.SetSourceUri(this.originalGif, new Uri(filename));
-                this.img = SixLabors.ImageSharp.Image.Load<Rgba32>(filename);
-                frameCount = img.Frames.Count;
-                delay = img.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay * 10;
-                if (delay == 0)
-                {
-                    delay = 106;
-                }
-                this.frameCountLabel.Content = "FrameCount: " + frameCount.ToString();
-                this.frameSlider.Maximum = Math.Min(frameCount, 64);
+                this.generationSettings = new GenerationSettings(SixLabors.ImageSharp.Image.Load<Rgba32>(filename));
+                this.frameCountLabel.Content = "FrameCount: " + generationSettings.Frames.ToString();
+                this.frameSlider.Maximum = Math.Min(generationSettings.Frames, 64);
                 this.startSlider.Minimum = 1;
                 this.endSlider.Minimum = 1;
                 this.startSlider.Value = 0;
-                this.startSlider.Maximum = frameCount;
-                this.endSlider.Maximum = frameCount;
-                this.endSlider.Value = frameCount;
+                this.startSlider.Maximum = generationSettings.Frames;
+                this.endSlider.Maximum = generationSettings.Frames;
+                this.endSlider.Value = generationSettings.Frames;
                 this.generate.IsEnabled = true;
                 this.chromaBox.IsEnabled = true;
                 this.logoff.IsEnabled = true;
                 this.frameSlider.Value = this.frameSlider.Maximum;
                 label2.Content = "1";
             }
-            var xD = MemoryDiagnostics.TotalUndisposedAllocationCount;
+            //var xD = MemoryDiagnostics.TotalUndisposedAllocationCount;
         }
 
         private async void generate_Click(object sender, RoutedEventArgs e)
         {
-            if (this.img is null)
+            if (this.generationSettings is null)
             {
                 return;
             }
-            if (lastResult != null)
-            {
-                lastResult.Dispose();
+            generationResult?.Dispose();
+            generationSettings.StartFrame = (int)startSlider.Value - 1;
+            generationSettings.EndFrame = (int)endSlider.Value - 1;
+            generationSettings.TargetFrameCount = (int)frameSlider.Value;
+            generationSettings.CropSettings = null;
+            generationSettings.ChromaSettings = null;
+            if (cropBox.IsChecked == true && rect != null) {
+                generationSettings.CropSettings = new Rect() { X = startPoint.X, Y = startPoint.Y, Width = rect.Width, Height = rect.Height };
             }
-            int startFrame = (int)startSlider.Value - 1;
-            int endFrame = (int)endSlider.Value - 1;
-            int selectedValue = (int)frameSlider.Value;
-            int duration = delay * frameCount;
-            bool crop = cropBox.IsChecked == true;
-            int keptFrames = (int)endSlider.Value - (int)startSlider.Value + 1;
-            double durationRatio = (double)frameCount / (double)keptFrames;
-            AnimationBehavior.SetSourceUri(this.resultGif, null);
-            System.IO.File.Delete(storagePath + "\\preview.gif");
-            finalDuration = (int)Math.Round((double)duration / durationRatio);
-            finalFrameCount = selectedValue;
-            int gridsize = selectedValue <= 4 ? 512 : (selectedValue <= 16 ? 256 : 128);
-            this.open.IsEnabled = false;
-            this.generate.IsEnabled = false;
-            this.save.IsEnabled = false;
-            this.upload.IsEnabled = false;
-            this.frameSlider.IsEnabled = false;
-            this.startSlider.IsEnabled = false;
-            this.endSlider.IsEnabled = false;
-            this.cropBox.IsEnabled = false;
-            this.logoff.IsEnabled = false;
+            if (chromaBox.IsChecked == true)
+            {
+                generationSettings.ChromaSettings = new ChromaSettings((ChromaType)this.chromaTypeBox.SelectedItem, chromaColor, (int)this.thresholdSlider.Value);
+            }
+            SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, null);
+            this.IsEnabled = false;
             this.generateLabel.Content = "Generating...";
-            this.resultGif.Source = null;
-            int threshold = (int)this.thresholdSlider.Value;
-            double cropX = startPoint.X;
-            double cropY = startPoint.Y;
-            double cropWidth = rect != null ? rect.Width : 0;
-            double cropHeight = rect != null ? rect.Height : 0;
-            bool useChroma = this.chromaBox.IsChecked ?? false;
-            ChromaType chromaType = (ChromaType)this.chromaTypeBox.SelectedItem;
-            lastResult = await Task.Run(() => {
-                SixLabors.ImageSharp.Image<Rgba32>[] frames = getFrames(img, startFrame, endFrame);
-                frameCount = frames.Length;
-                int toRemove = frameCount - selectedValue;
-                int ratio = toRemove != 0 ? (int)Math.Round((double)frameCount / (double)toRemove) : 0;
-                double realRatio = toRemove != 0 ? ((double)frameCount / (double)toRemove) : 0;
-                SixLabors.ImageSharp.Image<Rgba32>[] newFrames = new SixLabors.ImageSharp.Image<Rgba32>[selectedValue];
-                while (ratio < 2 && ratio != 0)
-                {
-                    frames = Divise(frames);
-                    frameCount = frames.Length;
-                    toRemove = frameCount - selectedValue;
-                    ratio = toRemove != 0 ? (int)Math.Round((double)frameCount / (double)toRemove) : 0;
-                    realRatio = toRemove != 0 ? ((double)frameCount / (double)toRemove) : 0;
-                }
-                int removed = 0;
-                int j = 0;
-                for (int i = 0; i < frames.Length; i++)
-                {
-                    if (ratio != 0 && i == (int)Math.Round(realRatio * (double)removed) && removed != toRemove)
-                    {
-                        removed++;
-                        continue;
-                    }
-
-                    if (j < newFrames.Length)
-                    {
-                        if (useChroma)
-                        {
-                            this.ChromaKey(frames[i], this.chromaColor, threshold, chromaType);
-                        }
-                        if (crop)
-                        {
-                            double cropWRatio = (double)256 / frames[i].Width;
-                            double cropHRatio = (double)256 / frames[i].Height;
-                            System.Drawing.Rectangle cropRect = new System.Drawing.Rectangle(
-                                new System.Drawing.Point((int)(cropX / cropWRatio), (int)(cropY / cropHRatio)),
-                                new System.Drawing.Size((int)(cropWidth / cropWRatio), (int)(cropHeight / cropHRatio))
-                            );
-                            frames[i].Mutate(
-                                i => i.Crop(new SixLabors.ImageSharp.Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(gridsize, gridsize, KnownResamplers.Box)
-                            );
-                        }
-                        else
-                        {
-                            frames[i].Mutate(
-                                i => i.Resize(gridsize, gridsize, KnownResamplers.Box)
-                            );
-                        }
-                        newFrames[j] = frames[i];
-                        j++;
-                    }
-                }
-                using Image<Rgba32> gif = new(gridsize, gridsize);
-                var gifMetaData = gif.Metadata.GetGifMetadata();
-                int fps = (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount));
-                int frameDelay = (int)Math.Round(((double)1000 / (double)fps)/(double)10);
-                gifMetaData.RepeatCount = 0;
-                GifFrameMetadata metadata = gif.Frames.RootFrame.Metadata.GetGifMetadata();
-                int maxline = 1024 / gridsize;
-                var result = new SixLabors.ImageSharp.Image<Rgba32>(1024, 1024);
-                int currentFrame = 0;
-
-                foreach (var frame in newFrames)
-                {
-                    var gifFrame = frame.Clone();
-                    result.Mutate(o => o
-                        .DrawImage(frame, new SixLabors.ImageSharp.Point((currentFrame % maxline) * gridsize, (currentFrame / maxline) * gridsize), 1f)
-                    );
-                    currentFrame++;
-                    gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().FrameDelay = frameDelay;
-                    if(useChroma)
-                    {
-                        gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().HasTransparency = true;
-                        gifFrame.Frames.RootFrame.Metadata.GetGifMetadata().DisposalMethod = GifDisposalMethod.RestoreToBackground;
-                    }
-                    gif.Frames.AddFrame(gifFrame.Frames.RootFrame);
-                    gifFrame.Dispose();
-                }
-                foreach (var frame in frames)
-                {
-                    frame.Dispose();
-                }
-                foreach (var frame in newFrames)
-                {
-                    frame.Dispose();
-                }
-                gif.Frames.RemoveFrame(0);
-                gif.SaveAsGif(storagePath + "\\preview.gif");
-                gif.Dispose();
-                return result;
-            });
-            AnimationBehavior.SetSourceUri(this.resultGif, new Uri(storagePath + "\\preview.gif"));
-            this.open.IsEnabled = true;
-            this.generate.IsEnabled = true;
+            generationResult = await Task.Run(() => { return EmojiGeneration.EmojiGeneration.GenerateEmoji(generationSettings); });
+            SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, generationResult.Image, generationResult.Frames, generationResult.Columns, generationResult.Columns, generationResult.FPS, 256, 256);
             this.save.IsEnabled = true;
             this.upload.IsEnabled = true;
-            this.frameSlider.IsEnabled = true;
-            this.startSlider.IsEnabled = true;
-            this.endSlider.IsEnabled = true;
-            this.cropBox.IsEnabled = true;
-            this.logoff.IsEnabled = true;
             this.generateLabel.Content = "";
-        }
-
-        public SixLabors.ImageSharp.Image<Rgba32>[] Divise(SixLabors.ImageSharp.Image<Rgba32>[] list)
-        {
-            List<SixLabors.ImageSharp.Image<Rgba32>> newList = new List<SixLabors.ImageSharp.Image<Rgba32>>();
-            for (int i = 0; i < list.Length; i++)
-            {
-                if (i % 2 != 0)
-                {
-                    newList.Add(list[i]);
-                } else
-                {
-                    list[i].Dispose();
-                }
-            }
-            return newList.ToArray();
-        }
-
-        void ChromaKey(SixLabors.ImageSharp.Image<Rgba32> image, Rgba32 chromaColor, int threshold, ChromaType chromaType)
-        {
-            if (chromaType == ChromaType.HSV)
-            {
-                Hsv targetColor = ColorSpaceConverter.ToHsv(chromaColor);
-                for (int i = 0; i < image.Width; i++)
-                {
-                    for (int j = 0; j < image.Height; j++)
-                    {
-                        Hsv pixelHSV = ColorSpaceConverter.ToHsv(image[i, j]);
-                        float hueDiff = Math.Abs(pixelHSV.H - targetColor.H);
-                        float satDiff = Math.Abs(pixelHSV.S - targetColor.S);
-                        float valDiff = Math.Abs(pixelHSV.V - targetColor.V);
-                        if (hueDiff <= threshold && satDiff <= threshold && valDiff <= threshold)
-                        {
-                            image[i, j] = SixLabors.ImageSharp.Color.Transparent;
-                        }
-                    }
-                }
-                return;
-            }
-            for (int i = 0; i < image.Width; i++)
-            {
-                for (int j = 0; j < image.Height; j++)
-                {
-                    Rgba32 pixelRGB = image[i, j];
-                    int rgbDiff = 
-                        Math.Abs(pixelRGB.R - chromaColor.R) +
-                        Math.Abs(pixelRGB.G - chromaColor.G) +
-                        Math.Abs(pixelRGB.B - chromaColor.B);
-                    if (rgbDiff <= threshold)
-                    {
-                        image[i, j] = SixLabors.ImageSharp.Color.Transparent;
-                    }
-                }
-            }
-        }
-
-        SixLabors.ImageSharp.Image<Rgba32>[] getFrames(SixLabors.ImageSharp.Image<Rgba32> originalImg, int frameStart, int frameEnd)
-        {
-            int numberOfFrames = originalImg.Frames.Count;
-            long[] timePerCall = new long[frameEnd - frameStart + 1];
-            SixLabors.ImageSharp.Image<Rgba32>[] frames = new SixLabors.ImageSharp.Image<Rgba32>[frameEnd - frameStart + 1];
-            int j = 0;
-            for (int i = 0; i < numberOfFrames; i++)
-            {
-                if (i >= frameStart && i <= frameEnd)
-                {
-                    frames[j] = originalImg.Frames.CloneFrame(i);
-                    j++;
-                }
-            }
-            return frames;
+            this.IsEnabled = true;
         }
 
         private void cropBox_Checked(object sender, RoutedEventArgs e)
         {
             rect = new System.Windows.Shapes.Rectangle
             {
-                Stroke = System.Windows.Media.Brushes.LightBlue,
+                Stroke = Brushes.LightBlue,
                 StrokeThickness = 2
             };
             startPoint = new System.Windows.Point(0, 0);
@@ -404,20 +195,25 @@ namespace VRCEMoji
 
         private void save_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Microsoft.Win32.SaveFileDialog();
-            dialog.DefaultExt = ".png";
-            dialog.Filter = @"PNG|*.png";
-            dialog.FileName = loadedName + "_" + finalFrameCount + "frames_" + (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount)) + "fps.png";
-            bool? result = dialog.ShowDialog();
-            if (result == true)
+            if (generationResult is not null)
             {
-                lastResult.SaveAsPng(dialog.FileName);
+                var dialog = new Microsoft.Win32.SaveFileDialog
+                {
+                    DefaultExt = ".png",
+                    Filter = @"PNG|*.png",
+                    FileName = loadedName + "_" + generationResult.Frames + "frames_" + generationResult.FPS + "fps.png"
+                };
+                bool? result = dialog.ShowDialog();
+                if (result == true)
+                {
+                    generationResult.Image.SaveAsPng(dialog.FileName);
+                }
             }
+            
         }
 
         private void startSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            
             if (this.endSlider != null && this.frameSlider != null && label2 != null) {
                 int oldval = (int)frameSlider.Value;
                 if (startSlider.Value > endSlider.Value)
@@ -428,7 +224,6 @@ namespace VRCEMoji
                 frameSlider.Value = Math.Min(frameSlider.Maximum, oldval);
                 label2.Content = startSlider.Value.ToString();
             }
-
         }
 
         private void endSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -444,7 +239,6 @@ namespace VRCEMoji
                 frameSlider.Value = Math.Min(frameSlider.Maximum, oldval);
                 label2_Copy.Content = endSlider.Value.ToString();
             }
-                
         }
 
         private void frameSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -492,149 +286,11 @@ namespace VRCEMoji
             this.chromaTypeBox.Visibility = Visibility.Hidden;
         }
 
-        static bool requiresEmail2FA(ApiResponse<CurrentUser> resp)
-        {
-            if (resp.RawContent.Contains("emailOtp"))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        static bool isAuthed(ApiResponse<CurrentUser> resp)
-        {
-            if (resp.RawContent.Contains("displayName"))
-            {
-                return true;
-            }
-
-            return false;
-        }
-
-        private StoredConfig? getStoredConfig()
-        {
-            if (System.IO.File.Exists(this.storagePath + "\\account.json"))
-            {
-                StoredConfig? storedConfig = JsonConvert.DeserializeObject<StoredConfig>(System.IO.File.ReadAllText(this.storagePath + "\\account.json"));
-                return storedConfig;
-            }
-            return null;
-        }
-
-        private VRChat.API.Client.Configuration? GetApiConfig()
-        {
-            VRChat.API.Client.Configuration config = new VRChat.API.Client.Configuration();
-            config.UserAgent = "VRCEmoji/1.2.0 wakamu";
-            if (this.storedConfig != null)
-            {
-                config.Username = storedConfig.Username;
-                config.Password = storedConfig.Password;
-                config.DefaultHeaders.Add("Cookie", "auth=" + storedConfig.Auth + ";twoFactorAuth=" + storedConfig.TwoKey);
-            } else
-            {
-                LoginDialog loginDialog = new LoginDialog { Owner = this };
-                if (loginDialog.ShowDialog() == true)
-                {
-                    config.Username = loginDialog.Login;
-                    config.Password = loginDialog.Password;
-                } else
-                {
-                    return null;
-                }
-            }
-            return config;
-        }
-
-        private void CreateStoredConfig(VRChat.API.Client.Configuration config, string auth, string twoKey, string displayName)
-        {
-            System.IO.File.Delete(this.storagePath + "\\account.json");
-            StoredConfig storedConfig = new StoredConfig { 
-                Username = config.Username,
-                Password = config.Password,
-                Auth = auth,
-                TwoKey = twoKey,
-                DisplayName = displayName
-            };
-            System.IO.File.WriteAllText(this.storagePath + "\\account.json", JsonConvert.SerializeObject(storedConfig));
-            this.storedConfig = storedConfig;
-            this.loggedLabel.Content = storedConfig.DisplayName;
-            this.logoff.Visibility = Visibility.Visible;
-        }
-
-        private AuthResult handleAuth()
-        {
-            VRChat.API.Client.Configuration? config = GetApiConfig();
-            AuthResult result = new AuthResult();
-            if (config == null)
-            {
-                return result;
-            }
-            bool logged = false;
-            CustomApiClient client = new CustomApiClient();
-            AuthenticationApi authApi = new AuthenticationApi(client, client, config);
-            try
-            {
-                ApiResponse<CurrentUser> currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                bool cancelOperation = false;
-                logged = true;
-                if (!isAuthed(currentUserResp) && !cancelOperation)
-                {
-                    if (requiresEmail2FA(currentUserResp))
-                    {
-                        InputDialog inputDialog = new InputDialog("Please verify with the OTP code sent to your email.");
-                        inputDialog.Owner = this;
-                        if (inputDialog.ShowDialog() == true)
-                        {
-                            authApi.Verify2FAEmailCode(new TwoFactorEmailCode(inputDialog.Answer));
-                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                        }
-                        else
-                        {
-                            cancelOperation = true;
-                        }
-                    }
-                    else
-                    {
-                        InputDialog inputDialog = new InputDialog("Please verify with your double authentication code.");
-                        inputDialog.Owner = this;
-                        if (inputDialog.ShowDialog() == true)
-                        {
-                            authApi.Verify2FA(new TwoFactorAuthCode(inputDialog.Answer));
-                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                        }
-                        else { cancelOperation = true; }
-                    }
-                }
-                if (cancelOperation)
-                {
-                    return result;
-                }
-                var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
-                var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
-                CurrentUser user = (CurrentUser)currentUserResp.Content;
-                if (authCookie != null && f2aCookie != null)
-                {
-                    var auth = authCookie.Value;
-                    var f2a = f2aCookie.Value;
-                    CreateStoredConfig(config, auth, f2a, user.DisplayName);
-                }
-                result.Success = true;
-                result.CurrentUser = user;
-                result.Configuration = config;
-                return result;
-            } catch(ApiException)
-            {
-                result.ErrorMessage = logged ? "An error occured with the two factor authentication.": "Invalid username/password.";
-                return result;
-            }
-        }    
-
         private void upload_Click(object sender, RoutedEventArgs e)
         {
             this.IsEnabled = false;
-            AuthResult authResult = this.handleAuth();
-            if ((! authResult.Success) || authResult.Configuration is null ||authResult.CurrentUser is null || this.lastResult is null)
+            AuthResult authResult = Authentication.Instance.HandleAuth();
+            if ((! authResult.Success) || authResult.Configuration is null ||authResult.CurrentUser is null || this.generationResult is null)
             {
                 if (authResult.ErrorMessage != null)
                 {
@@ -643,14 +299,18 @@ namespace VRCEMoji
                 this.IsEnabled = true;
                 return;
             }
+            this.loggedLabel.Content = authResult.CurrentUser.DisplayName;
+            this.logoff.Visibility = Visibility.Visible;
 
-            CustomApiClient client = new CustomApiClient();
+            CustomApiClient client = new();
             var fileApi = new EmojiApi.EmojiApi(client, client, authResult.Configuration);
             try
             {
                 List<EmojiFile> files = fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0);
-                UploadDialog uploadDialog = new UploadDialog();
-                uploadDialog.Owner = this;
+                UploadDialog uploadDialog = new()
+                {
+                    Owner = this
+                };
                 if (uploadDialog.ShowDialog() == false)
                 {
                     this.IsEnabled = true;
@@ -659,8 +319,10 @@ namespace VRCEMoji
                 UploadSettings uploadSettings = uploadDialog.Settings;
                 if (files.Count >= 9)
                 {
-                    ReplaceDialog replaceDialog = new ReplaceDialog(files);
-                    replaceDialog.Owner = this;
+                    ReplaceDialog replaceDialog = new(files)
+                    {
+                        Owner = this
+                    };
                     if (replaceDialog.ShowDialog() == true)
                     {
                         fileApi.DeleteFile(replaceDialog.SelectedId);
@@ -670,13 +332,14 @@ namespace VRCEMoji
                         return;
                     }
                 }
-                int fps = (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount));
-                CreateEmojiRequest request = new(finalFrameCount, fps, this.lastResult);
-                request.Name = loadedName + "_" + finalFrameCount + "frames_" + (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount)) + "fps.png";
-                request.Extension = ".png";
-                request.AnimationStyle = uploadSettings.AnimationStyle;
-                request.LoopStyle = uploadSettings.LoopStyle;
-                fileApi.CreateEmoji(this.lastResult, loadedName + "_" + finalFrameCount + "frames_" + (int)Math.Round((double)1000 / ((double)finalDuration / (double)finalFrameCount)) + "fps.png", request);
+                CreateEmojiRequest request = new(generationResult.Frames, generationResult.FPS, this.generationResult.Image)
+                {
+                    Name = loadedName + "_" + generationResult.Frames + "frames_" + generationResult.FPS + "fps.png",
+                    Extension = ".png",
+                    AnimationStyle = uploadSettings.AnimationStyle,
+                    LoopStyle = uploadSettings.LoopStyle
+                };
+                fileApi.CreateEmoji(this.generationResult.Image, request.Name, request);
                 MessageBox.Show("Emoji uploaded successfully!");
             }
             catch (ApiException ex)
@@ -688,8 +351,7 @@ namespace VRCEMoji
 
         private void logoff_Click(object sender, RoutedEventArgs e)
         {
-            System.IO.File.Delete(this.storagePath + "\\account.json");
-            this.storedConfig = null;
+            Authentication.Instance.LogOff();
             this.loggedLabel.Content = "Not logged in";
             this.logoff.Visibility = Visibility.Hidden;
         }
@@ -698,14 +360,5 @@ namespace VRCEMoji
         {
             chromaTypeBox.SelectedIndex = 0;
         }
-    }
-
-    public enum ChromaType
-    {
-        [EnumMember(Value = "hsv")]
-        HSV = 1,
-
-        [EnumMember(Value = "rgb")]
-        RGB = 2,
     }
 }
