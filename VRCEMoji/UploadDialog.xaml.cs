@@ -51,5 +51,10 @@ namespace VRCEMoji
             AnimationBehavior.SetSourceUri(this.stylePreview, null);
             SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, null);
         }
+
+        private void loopBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            SpriteSheetBehaviour.UpdateSpriteSheet(this.resultBrush, (int)fpsSlider.Value, (LoopStyle)loopBox.SelectedItem);
+        }
     }
 }

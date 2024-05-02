@@ -17,15 +17,17 @@ namespace VRCEMoji.EmojiGeneration
         {
             Image<Rgba32>[] frames = GetFrames(settings);
             int frameCount = frames.Length;
-            int toRemove = frameCount - settings.TargetFrameCount;
+            int targetFrameCount = settings.TargetFrameCount;
+            int toRemove = frameCount - targetFrameCount;
             int ratio = toRemove != 0 ? (int)Math.Round((double)frameCount / (double)toRemove) : 0;
             double realRatio = toRemove != 0 ? ((double)frameCount / (double)toRemove) : 0;
-            Image<Rgba32>[] newFrames = new Image<Rgba32>[settings.TargetFrameCount];
+            int gridSize = settings.GridSize;
+            Image<Rgba32>[] newFrames = new Image<Rgba32>[targetFrameCount];
             while (ratio < 2 && ratio != 0)
             {
                 frames = Divise(frames);
                 frameCount = frames.Length;
-                toRemove = frameCount - settings.TargetFrameCount;
+                toRemove = frameCount - targetFrameCount;
                 ratio = toRemove != 0 ? (int)Math.Round((double)frameCount / (double)toRemove) : 0;
                 realRatio = toRemove != 0 ? ((double)frameCount / (double)toRemove) : 0;
             }
@@ -55,27 +57,27 @@ namespace VRCEMoji.EmojiGeneration
                             new System.Drawing.Size((int)(cropSettings.Width / cropWRatio), (int)(cropSettings.Height / cropHRatio))
                         );
                         frames[i].Mutate(
-                            i => i.Crop(new Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(settings.GridSize, settings.GridSize)
+                            i => i.Crop(new Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(gridSize, gridSize)
                         );
                     }
                     else
                     {
                         frames[i].Mutate(
-                            i => i.Resize(settings.GridSize, settings.GridSize)
+                            i => i.Resize(gridSize, gridSize)
                         );
                     }
                     newFrames[j] = frames[i];
                     j++;
                 }
             }
-            int maxline = 1024 / settings.GridSize;
+            int maxline = 1024 / gridSize;
             var result = new Image<Rgba32>(1024, 1024);
             int currentFrame = 0;
 
             foreach (var frame in newFrames)
             {
                 result.Mutate(o => o
-                    .DrawImage(frame, new SixLabors.ImageSharp.Point((currentFrame % maxline) * settings.GridSize, (currentFrame / maxline) * settings.GridSize), 1f)
+                    .DrawImage(frame, new SixLabors.ImageSharp.Point((currentFrame % maxline) * gridSize, (currentFrame / maxline) * gridSize), 1f)
                 );
                 currentFrame++;
             }
@@ -87,7 +89,7 @@ namespace VRCEMoji.EmojiGeneration
             {
                 frame.Dispose();
             }
-            return new GenerationResult(result, settings.Name, settings.TargetFrameCount, settings.FPS);
+            return new GenerationResult(result, settings.Name, targetFrameCount, settings.FPS);
 
         }
 

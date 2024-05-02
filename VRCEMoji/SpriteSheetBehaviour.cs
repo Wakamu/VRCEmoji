@@ -3,6 +3,7 @@ using SixLabors.ImageSharp.Formats.Png;
 using System.IO;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using VRCEMoji.EmojiApi;
 
 namespace VRCEMoji
 {
@@ -15,6 +16,7 @@ namespace VRCEMoji
         private readonly int frames, rows, columns, width, height;
         private int fps;
         private readonly MatrixTransform transform;
+        private LoopStyle loopStyle;
 
         public SpriteSheetBehaviour(ImageBrush brush, int frames, int rows, int columns, int displayWidth, int displayHeight, int fps)
         {
@@ -28,14 +30,19 @@ namespace VRCEMoji
             this.fps = fps;
             this.transform = new MatrixTransform();
             brush.Transform = transform;
+            loopStyle = LoopStyle.Linear;
         }
 
-        public static void UpdateSpriteSheet(ImageBrush brush, int fps)
+        public static void UpdateSpriteSheet(ImageBrush brush, int fps, LoopStyle? loopStyle = null)
         {
             SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
             if (behaviour is not null)
             {
                 behaviour.fps = fps;
+                if (loopStyle != null)
+                {
+                    behaviour.loopStyle = (LoopStyle)loopStyle;
+                }
             }
         }
 
@@ -82,7 +89,11 @@ namespace VRCEMoji
             foreach (SpriteSheetBehaviour behaviour in behaviours) {
                 DateTime now = DateTime.Now;
                 TimeSpan ts = now - behaviour.instanceTime;
-                int currentFrame = (int)(ts.TotalSeconds * (double)behaviour.fps) % behaviour.frames;
+                int currentFrame = (int)(ts.TotalSeconds * (double)behaviour.fps) % (behaviour.loopStyle == LoopStyle.Linear ? behaviour.frames : (behaviour.frames * 2 - 2));
+                if (behaviour.loopStyle == LoopStyle.PingPong && currentFrame >= behaviour.frames)
+                {
+                    currentFrame = (behaviour.frames * 2 - 2) - currentFrame;
+                }
                 var column = currentFrame % behaviour.columns;
                 var row = currentFrame / behaviour.rows;
                 Matrix transform = Matrix.Identity;

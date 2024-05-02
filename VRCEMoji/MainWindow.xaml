@@ -33,7 +33,7 @@
         <Image x:Name="originalGif" HorizontalAlignment="Left" Height="256" Margin="227,86,0,0" VerticalAlignment="Top" Width="256" MinWidth="256" MinHeight="256" MaxWidth="256" MaxHeight="256" Stretch="Fill" Grid.ColumnSpan="2"/>
         <Canvas Background="Transparent" Height="256" HorizontalAlignment="Left" VerticalAlignment="Top" Width="256" Margin="227,86,0,0" Name="canvas" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" Grid.ColumnSpan="2"/>
         <Label x:Name="frameCountLabel" Content="" HorizontalAlignment="Left" Height="32" VerticalAlignment="Top" Width="246" Grid.Column="1" Foreground="White" Margin="4,64,0,0"/>
-        <Slider x:Name="frameSlider" HorizontalAlignment="Left" Height="37" Margin="54,233,0,0" VerticalAlignment="Top" Width="112" Maximum="1" AutoToolTipPlacement="BottomRight" SmallChange="1" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="frameSlider_ValueChanged" Minimum="1"/>
+        <ComboBox x:Name="ConvertModeBox" HorizontalAlignment="Left" Height="22" Margin="54,235,0,0" VerticalAlignment="Top" Width="112" IsEnabled="False"/>
         <Button x:Name="generate" Content="Generate" HorizontalAlignment="Left" Height="52" Margin="50,416,0,0" VerticalAlignment="Top" Width="108" Click="generate_Click" IsEnabled="False" Background="#FFBF67FF"/>
         <CheckBox x:Name="cropBox" Content="Crop" HorizontalAlignment="Left" Margin="52,274,0,0" VerticalAlignment="Top" Checked="cropBox_Checked" Unchecked="cropBox_Unchecked" Height="14" Width="54" Foreground="White"/>
         <CheckBox x:Name="chromaBox" Content="ChromaKey" HorizontalAlignment="Left" Margin="52,304,0,0" VerticalAlignment="Top" Height="14" Width="84" Foreground="White" Checked="chromaBox_Checked" Unchecked="chromaBox_Unchecked" IsEnabled="False"/>
@@ -42,10 +42,9 @@
         <Slider x:Name="endSlider" HorizontalAlignment="Left" Height="44" Margin="54,184,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="endSlider_ValueChanged" Minimum="1"/>
         <Label x:Name="label1" Content="Start:" HorizontalAlignment="Left" Height="37" Margin="6,142,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
         <Label x:Name="label1_Copy" Content="End:" HorizontalAlignment="Left" Height="37" Margin="5,184,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label1_Copy1" Content="Frames:" HorizontalAlignment="Left" Height="37" Margin="6,233,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <Label x:Name="label1_Copy1" Content="Mode:" HorizontalAlignment="Left" Height="37" Margin="6,233,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
         <Label x:Name="label2" Content="" HorizontalAlignment="Left" Margin="172,142,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
         <Label x:Name="label2_Copy" Content="" HorizontalAlignment="Left" Margin="172,185,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
-        <Label x:Name="label2_Copy1" Content="" HorizontalAlignment="Left" Margin="172,233,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
         <Button x:Name="chromaButton" Content="" HorizontalAlignment="Left" Height="25" Margin="143,301,0,0" VerticalAlignment="Top" Width="23" Background="Lime" Foreground="Lime" Click="chromaButton_Click" IsEnabled="False" Visibility="Hidden"/>
         <Slider x:Name="thresholdSlider" HorizontalAlignment="Left" Height="30" Margin="71,366,0,0" VerticalAlignment="Top" Width="112" Maximum="100" AutoToolTipPlacement="BottomRight" Value="30" SmallChange="1" IsSnapToTickEnabled="True" Visibility="Hidden"/>
         <Label x:Name="threshold_label" Content="Threshold:" HorizontalAlignment="Left" Height="37" Margin="5,359,0,0" VerticalAlignment="Top" Width="66" Foreground="White" Visibility="Hidden"/>
@@ -54,7 +53,7 @@
         <Button x:Name="logoff" Content="Logout" HorizontalAlignment="Left" Height="28" Margin="143,10,0,0" VerticalAlignment="Top" Width="84" Background="#FFC680F9" Click="logoff_Click" Visibility="Hidden"/>
         <Label x:Name="chromaTypeLabel" Content="Type:" HorizontalAlignment="Left" Height="28" Margin="6,326,0,0" VerticalAlignment="Top" Width="61" Foreground="White" Visibility="Hidden"/>
         <ComboBox x:Name="chromaTypeBox" HorizontalAlignment="Left" Height="22" Margin="72,329,0,0" VerticalAlignment="Top" Width="111" Visibility="Hidden"/>
-
+        
 
 
     </Grid>

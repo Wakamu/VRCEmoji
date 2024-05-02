@@ -1,5 +1,6 @@
 ﻿using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
+using System.Runtime.Serialization;
 using System.Windows;
 
 namespace VRCEMoji.EmojiGeneration
@@ -14,11 +15,24 @@ namespace VRCEMoji.EmojiGeneration
 
         public ChromaSettings? ChromaSettings { get; set; } = chromaSettings;
 
+        public GenerationMode GenerationMode { get; set; } = GenerationMode.Fluidity;
+
         public int StartFrame { get; set; } = 1;
 
         public int EndFrame { get; set; } = image.Frames.Count;
 
-        public int TargetFrameCount { get; set; } = image.Frames.Count;
+        public int TargetFrameCount {
+            get
+            {
+                return GenerationMode switch
+                {
+                    GenerationMode.Fluidity => Math.Min(64, KeptFrames),
+                    GenerationMode.Balance => Math.Min(16, KeptFrames),
+                    GenerationMode.Quality => Math.Min(4, KeptFrames),
+                    _ => Math.Min(64, KeptFrames),
+                };
+            }
+        }
 
         public int TargetDuration { 
             get { return KeptFrames * FrameDelay; }
@@ -57,5 +71,17 @@ namespace VRCEMoji.EmojiGeneration
         {
             Image.Dispose();
         }
+    }
+
+    public enum GenerationMode
+    {
+        [EnumMember(Value = "quality")]
+        Quality = 1,
+
+        [EnumMember(Value = "balance")]
+        Balance = 2,
+
+        [EnumMember(Value = "fluidity")]
+        Fluidity = 3,
     }
 }

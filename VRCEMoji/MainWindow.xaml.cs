@@ -32,6 +32,7 @@ namespace VRCEMoji
                 this.logoff.Visibility = Visibility.Visible;
             }
             chromaTypeBox.ItemsSource = Enum.GetValues(typeof(ChromaType)).Cast<ChromaType>();
+            ConvertModeBox.ItemsSource = Enum.GetValues(typeof(GenerationMode)).Cast<GenerationMode>();
             _instance = this;
         }
 
@@ -64,6 +65,7 @@ namespace VRCEMoji
                 this.upload.IsEnabled = true;
                 this.chromaBox.IsEnabled = true;
                 this.logoff.IsEnabled = true;
+                this.ConvertModeBox.IsEnabled = true;
                 AnimationBehavior.GetAnimator(originalGif).Play();
             }
             else if (this.cropBox.IsChecked == true)
@@ -123,7 +125,6 @@ namespace VRCEMoji
                 AnimationBehavior.SetSourceUri(this.originalGif, new Uri(filename));
                 this.generationSettings = new GenerationSettings(SixLabors.ImageSharp.Image.Load<Rgba32>(filename), loadedName);
                 this.frameCountLabel.Content = "FrameCount: " + generationSettings.Frames.ToString();
-                this.frameSlider.Maximum = Math.Min(generationSettings.Frames, 64);
                 this.startSlider.Minimum = 1;
                 this.endSlider.Minimum = 1;
                 this.startSlider.Value = 0;
@@ -133,7 +134,8 @@ namespace VRCEMoji
                 this.generate.IsEnabled = true;
                 this.chromaBox.IsEnabled = true;
                 this.logoff.IsEnabled = true;
-                this.frameSlider.Value = this.frameSlider.Maximum;
+                ConvertModeBox.IsEnabled = true;
+                ConvertModeBox.SelectedItem = GenerationMode.Fluidity;
                 label2.Content = "1";
             }
             //var xD = MemoryDiagnostics.TotalUndisposedAllocationCount;
@@ -148,7 +150,7 @@ namespace VRCEMoji
             generationResult?.Dispose();
             generationSettings.StartFrame = (int)startSlider.Value - 1;
             generationSettings.EndFrame = (int)endSlider.Value - 1;
-            generationSettings.TargetFrameCount = (int)frameSlider.Value;
+            generationSettings.GenerationMode = (GenerationMode)ConvertModeBox.SelectedItem;
             generationSettings.CropSettings = null;
             generationSettings.ChromaSettings = null;
             if (cropBox.IsChecked == true && rect != null) {
@@ -211,38 +213,25 @@ namespace VRCEMoji
 
         private void startSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (this.endSlider != null && this.frameSlider != null && label2 != null) {
-                int oldval = (int)frameSlider.Value;
+            if (this.endSlider != null && label2 != null) {
                 if (startSlider.Value > endSlider.Value)
                 {
                     startSlider.Value = endSlider.Value;
                 }
-                this.frameSlider.Maximum = Math.Min(64, endSlider.Value - startSlider.Value + 1);
-                frameSlider.Value = Math.Min(frameSlider.Maximum, oldval);
+                int availableFrames = (int)Math.Min(64, endSlider.Value - startSlider.Value + 1);
                 label2.Content = startSlider.Value.ToString();
             }
         }
 
         private void endSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
-            if (this.startSlider != null && this.frameSlider != null && label2_Copy != null)
+            if (this.startSlider != null && label2_Copy != null)
             {
-                int oldval = (int)frameSlider.Value;
                 if (endSlider.Value < startSlider.Value)
                 {
                     endSlider.Value = startSlider.Value;
                 }
-                this.frameSlider.Maximum = Math.Min(64, endSlider.Value - startSlider.Value + 1);
-                frameSlider.Value = Math.Min(frameSlider.Maximum, oldval);
                 label2_Copy.Content = endSlider.Value.ToString();
-            }
-        }
-
-        private void frameSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            if (label2_Copy1 != null)
-            {
-                label2_Copy1.Content = frameSlider.Value.ToString();
             }
         }
 
@@ -256,6 +245,7 @@ namespace VRCEMoji
             this.upload.IsEnabled = false;
             this.chromaBox.IsEnabled = false;
             this.logoff.IsEnabled = false;
+            this.ConvertModeBox.IsEnabled = false;
             Mouse.OverrideCursor = Cursors.Cross;
             AnimationBehavior.GetAnimator(originalGif).Pause();
         }
