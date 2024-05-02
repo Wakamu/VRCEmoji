@@ -25,13 +25,15 @@ Converter tool from Gif to VRC compatible spritesheets for animated emojis
 
 - Start: Select at which frame of the GIF the emoji should start (default: first frame).
 - End: Select at which frame of the GIF the emoji should end (default: last frame).
-- Frames: Select the total number of frames that should be in the resulting spritesheet, this will affect the resulting quality of the spritesheet, see the [Quality tips](#quality-tips) section.
+- Mode: Select the generation mode for the resulting spritesheet, this will affect the resulting quality and fluidity of the spritesheet, see the [Generation mode tips](#generation-mode-tips) section.
 - Crop: Allows you to select a specific area of the GIF to be converted.
 - ChromaKey: Allows you to apply a chroma key filter to the GIF, click on the colored button then on the GIF to select a color to filter.
 
-## Quality tips
+## Generation mode tips
 
 VRChat limits the size and number of frames on the spritesheet, depending on the amount of frames, the quality of each frame will change:
-- <= 4 frames : 512x512.
-- <= 16 frames : 256x256.
-- <= 64 frames : 128x128.
+- Quality: 4 frames at 512x512 pixels.
+- Balance: 16 frames at 256x256 pixels.
+- Fluidity: 64 frames at 128x128 pixels.
+
+If you don't know what you are doing, in most cases Fluidity should be the best option.
