@@ -12,25 +12,25 @@ namespace VRCEMoji.EmojiApi
         {
         }
 
-        public EmojiFile CreateEmoji(Image image, string name, CreateEmojiRequest createFileRequest = default(CreateEmojiRequest), int operationIndex = 0)
+        public EmojiFile CreateEmoji(CreateEmojiRequest createFileRequest, int operationIndex = 0)
         {
-            VRChat.API.Client.ApiResponse<EmojiFile> localVarResponse = CreateEmojiFileWithHttpInfo(image, name, createFileRequest);
+            VRChat.API.Client.ApiResponse<EmojiFile> localVarResponse = CreateEmojiFileWithHttpInfo(createFileRequest, operationIndex);
             return localVarResponse.Data;
         }
 
-        public VRChat.API.Client.ApiResponse<EmojiFile> CreateEmojiFileWithHttpInfo(Image image ,string name, CreateEmojiRequest createFileRequest = default(CreateEmojiRequest), int operationIndex = 0)
+        public VRChat.API.Client.ApiResponse<EmojiFile> CreateEmojiFileWithHttpInfo(CreateEmojiRequest createFileRequest, int operationIndex = 0)
         {
-            VRChat.API.Client.RequestOptions localVarRequestOptions = new VRChat.API.Client.RequestOptions();
+            VRChat.API.Client.RequestOptions localVarRequestOptions = new();
 
             localVarRequestOptions.HeaderParameters.Add("Accept", "*/*");
 
             localVarRequestOptions.FormParameters = createFileRequest.GetFormParams();
-            localVarRequestOptions.FileParameters = new VRChat.API.Client.Multimap<string, System.IO.Stream>();
+            localVarRequestOptions.FileParameters = [];
             using (Stream st = new MemoryStream())
             {
-                image.SaveAsPng(st);
+                createFileRequest.Image.SaveAsPng(st);
                 st.Position = 0;
-                localVarRequestOptions.FileParameters.Add(name, st);
+                localVarRequestOptions.FileParameters.Add(createFileRequest.Name, st);
                 localVarRequestOptions.Operation = "FilesApi.CreateFile";
                 localVarRequestOptions.OperationIndex = operationIndex;
                 if (!string.IsNullOrEmpty(this.Configuration.GetApiKeyWithPrefix("auth")))
@@ -58,14 +58,13 @@ namespace VRCEMoji.EmojiApi
 
         public VRChat.API.Client.ApiResponse<List<EmojiFile>> GetEmojiFilesWithHttpInfo(string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)
         {
-            VRChat.API.Client.RequestOptions localVarRequestOptions = new VRChat.API.Client.RequestOptions();
+            VRChat.API.Client.RequestOptions localVarRequestOptions = new();
 
-            string[] _contentTypes = new string[] {
-            };
+            string[] _contentTypes = [];
 
-            string[] _accepts = new string[] {
+            string[] _accepts = [
                 "application/json"
-            };
+            ];
 
             var localVarContentType = VRChat.API.Client.ClientUtils.SelectHeaderContentType(_contentTypes);
             if (localVarContentType != null)

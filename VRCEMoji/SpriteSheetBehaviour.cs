@@ -12,7 +12,8 @@ namespace VRCEMoji
 
         private readonly ImageBrush brush;
         private DateTime instanceTime;
-        private readonly int frames, rows, columns, width, height, fps;
+        private readonly int frames, rows, columns, width, height;
+        private int fps;
         private readonly MatrixTransform transform;
 
         public SpriteSheetBehaviour(ImageBrush brush, int frames, int rows, int columns, int displayWidth, int displayHeight, int fps)
@@ -27,6 +28,15 @@ namespace VRCEMoji
             this.fps = fps;
             this.transform = new MatrixTransform();
             brush.Transform = transform;
+        }
+
+        public static void UpdateSpriteSheet(ImageBrush brush, int fps)
+        {
+            SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
+            if (behaviour is not null)
+            {
+                behaviour.fps = fps;
+            }
         }
 
         public static void SetSpriteSheet(ImageBrush brush, Image? image = null, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0) {
@@ -53,6 +63,7 @@ namespace VRCEMoji
                 imageSource.BeginInit();
                 imageSource.StreamSource = ms;
                 imageSource.EndInit();
+                imageSource.Freeze();
                 brush.Stretch = Stretch.Fill;
                 brush.AlignmentX = AlignmentX.Left;
                 brush.AlignmentY = AlignmentY.Top;

@@ -4,6 +4,9 @@ using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.Windows;
+using VRCEmoji.EmojiApi;
+using VRCEMoji.EmojiApi;
+using VRChat.API.Client;
 
 namespace VRCEMoji.EmojiGeneration
 {
@@ -84,8 +87,60 @@ namespace VRCEMoji.EmojiGeneration
             {
                 frame.Dispose();
             }
-            return new GenerationResult(result, settings.TargetFrameCount, settings.FPS);
+            return new GenerationResult(result, settings.Name, settings.TargetFrameCount, settings.FPS);
 
+        }
+
+        public static AuthResult? UploadEmoji (GenerationResult result)
+        {
+            AuthResult authResult = Authentication.Instance.HandleAuth();
+            if ((!authResult.Success) || authResult.Configuration is null || authResult.CurrentUser is null)
+            {
+                if (authResult.ErrorMessage != null)
+                {
+                    MessageBox.Show(authResult.ErrorMessage);
+                }
+                return null;
+            }
+
+            CustomApiClient client = new();
+            var fileApi = new EmojiApi.EmojiApi(client, client, authResult.Configuration);
+            try
+            {
+                List<EmojiFile> files = fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0);
+                UploadDialog uploadDialog = new(result)
+                {
+                    Owner = MainWindow.Instance
+                };
+                if (uploadDialog.ShowDialog() == false)
+                {
+                    return authResult;
+                }
+                UploadSettings uploadSettings = uploadDialog.Settings;
+                if (files.Count >= 9)
+                {
+                    ReplaceDialog replaceDialog = new(files)
+                    {
+                        Owner = MainWindow.Instance
+                    };
+                    if (replaceDialog.ShowDialog() == true)
+                    {
+                        fileApi.DeleteFile(replaceDialog.SelectedId);
+                    }
+                    else
+                    {
+                        return authResult;
+                    }
+                }
+                CreateEmojiRequest request = new(result, uploadSettings);
+                fileApi.CreateEmoji(request);
+                MessageBox.Show("Emoji uploaded successfully!");
+            }
+            catch (ApiException ex)
+            {
+                MessageBox.Show(ex.Message, "Error");
+            }
+            return authResult;
         }
 
         static Image<Rgba32>[] Divise(Image<Rgba32>[] list)

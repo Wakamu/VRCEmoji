@@ -4,8 +4,10 @@ using System.Windows;
 
 namespace VRCEMoji.EmojiGeneration
 {
-    internal class GenerationSettings(Image<Rgba32> image, Rect? cropSettings = null, ChromaSettings? chromaSettings = null): IDisposable
+    internal class GenerationSettings(Image<Rgba32> image, string name, Rect? cropSettings = null, ChromaSettings? chromaSettings = null): IDisposable
     {
+        public string Name { get; set; } = name;
+
         public Image<Rgba32> Image { get; set; } = image;
 
         public Rect? CropSettings { get; set; } = cropSettings;

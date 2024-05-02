@@ -1,5 +1,6 @@
 ﻿using SixLabors.ImageSharp;
 using System.Runtime.Serialization;
+using VRCEMoji.EmojiGeneration;
 using VRChat.API.Model;
 
 namespace VRCEMoji.EmojiApi
@@ -11,6 +12,9 @@ namespace VRCEMoji.EmojiApi
         
         [DataMember(Name = "loopStyle", IsRequired = true, EmitDefaultValue = true)]
         public LoopStyle LoopStyle { get; set; }
+
+        [DataMember(Name = "image", IsRequired = true, EmitDefaultValue = true)]
+        public Image Image { get; set; }
 
         [DataMember(Name = "maskTag", IsRequired = true, EmitDefaultValue = true)]
         public string MaskTag { get; set; } = "square";
@@ -34,23 +38,29 @@ namespace VRCEMoji.EmojiApi
             return null;
         }
 
-        public CreateEmojiRequest(int frames, int fps, Image image) : base()
+        public CreateEmojiRequest(GenerationResult generationResult, UploadSettings settings) : base()
         {
-            AnimationStyle = AnimationStyle.Aura;
-            FPS = fps;
-            Frames = frames;
+            AnimationStyle = settings.AnimationStyle;
+            LoopStyle = settings.LoopStyle;
+            FPS = settings.FPSOverride > 0 ? settings.FPSOverride : generationResult.FPS;
+            Frames = generationResult.Frames;
             MimeType = MIMEType.ImagePng;
+            Image = generationResult.Image;
+            Name = generationResult.Name + "_" + generationResult.Frames + "frames_" + FPS + "fps.png";
+            Extension = ".png";
         }
 
         public Dictionary<string, string> GetFormParams()
         {
-            var formParams = new Dictionary<string, string>();
-            formParams.Add("tag", "emojianimated");
-            formParams.Add("frames", this.Frames.ToString());
-            formParams.Add("framesOverTime", this.FPS.ToString());
-            formParams.Add("animationStyle", GetEnumMemberAttrValue(this.AnimationStyle));
-            formParams.Add("maskTag", this.MaskTag.ToString());
-            formParams.Add("loopStyle", GetEnumMemberAttrValue(this.LoopStyle));
+            var formParams = new Dictionary<string, string>
+            {
+                { "tag", "emojianimated" },
+                { "frames", this.Frames.ToString() },
+                { "framesOverTime", this.FPS.ToString() },
+                { "animationStyle", GetEnumMemberAttrValue(this.AnimationStyle) },
+                { "maskTag", this.MaskTag.ToString() },
+                { "loopStyle", GetEnumMemberAttrValue(this.LoopStyle) }
+            };
             return formParams;
         }
     }

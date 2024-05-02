@@ -5,10 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using XamlAnimatedGif;
 using System.Windows.Media;
-using VRChat.API.Client;
 using VRCEMoji.EmojiApi;
-using VRCEmoji.EmojiApi;
-using System.Runtime.Serialization;
 using VRCEMoji.EmojiGeneration;
 
 namespace VRCEMoji
@@ -124,7 +121,7 @@ namespace VRCEMoji
                 string filename = dialog.FileName;
                 loadedName = System.IO.Path.GetFileNameWithoutExtension(filename);
                 AnimationBehavior.SetSourceUri(this.originalGif, new Uri(filename));
-                this.generationSettings = new GenerationSettings(SixLabors.ImageSharp.Image.Load<Rgba32>(filename));
+                this.generationSettings = new GenerationSettings(SixLabors.ImageSharp.Image.Load<Rgba32>(filename), loadedName);
                 this.frameCountLabel.Content = "FrameCount: " + generationSettings.Frames.ToString();
                 this.frameSlider.Maximum = Math.Min(generationSettings.Frames, 64);
                 this.startSlider.Minimum = 1;
@@ -288,63 +285,14 @@ namespace VRCEMoji
 
         private void upload_Click(object sender, RoutedEventArgs e)
         {
-            this.IsEnabled = false;
-            AuthResult authResult = Authentication.Instance.HandleAuth();
-            if ((! authResult.Success) || authResult.Configuration is null ||authResult.CurrentUser is null || this.generationResult is null)
-            {
-                if (authResult.ErrorMessage != null)
-                {
-                    MessageBox.Show(authResult.ErrorMessage);
-                }
-                this.IsEnabled = true;
+            if (this.generationResult == null) {
                 return;
             }
-            this.loggedLabel.Content = authResult.CurrentUser.DisplayName;
-            this.logoff.Visibility = Visibility.Visible;
-
-            CustomApiClient client = new();
-            var fileApi = new EmojiApi.EmojiApi(client, client, authResult.Configuration);
-            try
-            {
-                List<EmojiFile> files = fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0);
-                UploadDialog uploadDialog = new()
-                {
-                    Owner = this
-                };
-                if (uploadDialog.ShowDialog() == false)
-                {
-                    this.IsEnabled = true;
-                    return;
-                }
-                UploadSettings uploadSettings = uploadDialog.Settings;
-                if (files.Count >= 9)
-                {
-                    ReplaceDialog replaceDialog = new(files)
-                    {
-                        Owner = this
-                    };
-                    if (replaceDialog.ShowDialog() == true)
-                    {
-                        fileApi.DeleteFile(replaceDialog.SelectedId);
-                    } else
-                    {
-                        this.IsEnabled = true;
-                        return;
-                    }
-                }
-                CreateEmojiRequest request = new(generationResult.Frames, generationResult.FPS, this.generationResult.Image)
-                {
-                    Name = loadedName + "_" + generationResult.Frames + "frames_" + generationResult.FPS + "fps.png",
-                    Extension = ".png",
-                    AnimationStyle = uploadSettings.AnimationStyle,
-                    LoopStyle = uploadSettings.LoopStyle
-                };
-                fileApi.CreateEmoji(this.generationResult.Image, request.Name, request);
-                MessageBox.Show("Emoji uploaded successfully!");
-            }
-            catch (ApiException ex)
-            {
-                MessageBox.Show(ex.Message, "Error");
+            this.IsEnabled = false;
+            AuthResult? authResult = EmojiGeneration.EmojiGeneration.UploadEmoji(generationResult);
+            if (authResult != null) {
+                this.loggedLabel.Content = authResult.CurrentUser?.DisplayName;
+                this.logoff.Visibility = Visibility.Visible;
             }
             this.IsEnabled = true;
         }

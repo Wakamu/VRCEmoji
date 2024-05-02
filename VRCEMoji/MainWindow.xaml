@@ -54,7 +54,7 @@
         <Button x:Name="logoff" Content="Logout" HorizontalAlignment="Left" Height="28" Margin="143,10,0,0" VerticalAlignment="Top" Width="84" Background="#FFC680F9" Click="logoff_Click" Visibility="Hidden"/>
         <Label x:Name="chromaTypeLabel" Content="Type:" HorizontalAlignment="Left" Height="28" Margin="6,326,0,0" VerticalAlignment="Top" Width="61" Foreground="White" Visibility="Hidden"/>
         <ComboBox x:Name="chromaTypeBox" HorizontalAlignment="Left" Height="22" Margin="72,329,0,0" VerticalAlignment="Top" Width="111" Visibility="Hidden"/>
-        
+
 
 
     </Grid>

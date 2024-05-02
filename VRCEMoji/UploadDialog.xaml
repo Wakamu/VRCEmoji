@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:VRCEMoji"
         mc:Ignorable="d"
-        WindowStartupLocation="CenterOwner" Title="Upload" Height="320" Width="450" ResizeMode="NoResize" Background="#FF484747" ContentRendered="Window_ContentRendered">
+        WindowStartupLocation="CenterOwner" Title="Upload" Height="460" Width="450" ResizeMode="NoResize" Background="#FF484747" ContentRendered="Window_ContentRendered" Closing="Window_Closing">
     <Grid Margin="20,20,20,20">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
@@ -13,10 +13,27 @@
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="*"/>
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
-        <Image x:Name="stylePreview" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Left" Height="128"  VerticalAlignment="Top" Width="128" Margin="40,0,0,0"/>
-        <ComboBox x:Name="styleBox" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Width="120" SelectionChanged="styleBox_SelectionChanged">
+        <Label x:Name="fpsLabel" Content="FPS" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,70" Foreground="White"/>
+        <Label x:Name="fpsValue" Content="" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="150,0,0,0" Foreground="White"/>
+        <Label x:Name="animationLabel" Content="Animation:" Grid.Column="0" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,70" Foreground="White"/>
+        <Label x:Name="loopLabel" Content="Loop:" Grid.Column="0" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,70" Foreground="White"/>
+        <Rectangle x:Name="resultRect" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Left" Height="128" Stroke="Black" VerticalAlignment="Top" Width="128" Margin="40,0,0,0" StrokeThickness="0">
+            <Rectangle.Fill>
+                <ImageBrush x:Name="resultBrush"
+                        Stretch="UniformToFill"
+                        AlignmentX="Left" 
+                        AlignmentY="Top">
+                    <ImageBrush.Transform>
+                        <MatrixTransform x:Name="SpriteSheetOffset" />
+                    </ImageBrush.Transform>
+                </ImageBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+        <Image x:Name="stylePreview" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Left" Height="128"  VerticalAlignment="Top" Width="128" Margin="40,0,0,0"/>
+        <ComboBox x:Name="styleBox" Grid.Column="0" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="120" SelectionChanged="styleBox_SelectionChanged">
             <ComboBox.Background>
                 <LinearGradientBrush EndPoint="0,1">
                     <GradientStop Color="#FFF0F0F0"/>
@@ -24,7 +41,7 @@
                 </LinearGradientBrush>
             </ComboBox.Background>
         </ComboBox>
-        <ComboBox x:Name="loopBox" Grid.Column="0" Grid.Row="1" HorizontalAlignment="Center" VerticalAlignment="Center" Width="120">
+        <ComboBox x:Name="loopBox" Grid.Column="0" Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center" Width="120">
             <ComboBox.Background>
                 <LinearGradientBrush EndPoint="0,1">
                     <GradientStop Color="#FFF0F0F0"/>
@@ -32,6 +49,7 @@
                 </LinearGradientBrush>
             </ComboBox.Background>
         </ComboBox>
-        <Button x:Name="upload" Grid.Column="1" Grid.Row="1" Content="Upload" HorizontalAlignment="Center" VerticalAlignment="Center" Height="49" Width="125" Background="#FFC680F9" Click="upload_Click"/>
+        <Button x:Name="upload" Grid.Column="1" Grid.Row="2" Content="Upload" HorizontalAlignment="Center" VerticalAlignment="Center" Height="49" Width="125" Background="#FFC680F9" Click="upload_Click"/>
+        <Slider x:Name="fpsSlider" Grid.Column="0" Grid.Row="0" HorizontalAlignment="Center" Height="31" VerticalAlignment="Center" Width="120" IsSnapToTickEnabled="True" Interval="1" IsMoveToPointEnabled="True" SmallChange="1" Maximum="64" TickPlacement="TopLeft" Minimum="1" Value="1" ValueChanged="fpsSlider_ValueChanged"/>
     </Grid>
 </Window>
