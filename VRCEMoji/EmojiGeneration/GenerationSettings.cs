@@ -63,7 +63,7 @@ namespace VRCEMoji.EmojiGeneration
         public int FPS
         {
             get { 
-                return (int)Math.Round((double)TargetFrameCount / ((double)TargetDuration / 1000d));
+                return Math.Max(1, (int)Math.Round((double)TargetFrameCount / ((double)TargetDuration / 1000d)));
             }
         }
 
