@@ -25,6 +25,8 @@ namespace VRCEMoji.EmojiApi
         [DataMember(Name = "frames", IsRequired = true, EmitDefaultValue = true)]
         public int Frames { get; set; }
 
+        public string Tag { get; set; }
+
         public string GetEnumMemberAttrValue<T>(T enumVal)
         {
             var enumType = typeof(T);
@@ -48,20 +50,33 @@ namespace VRCEMoji.EmojiApi
             Image = generationResult.Image;
             Name = generationResult.Name + "_" + generationResult.Frames + "frames_" + FPS + "fps.png";
             Extension = ".png";
+            Tag = generationResult.GenerationType == GenerationType.Emoji ? "emojianimated" : "sticker";
         }
 
         public Dictionary<string, string> GetFormParams()
         {
-            var formParams = new Dictionary<string, string>
+            if (this.Tag == "sticker")
             {
-                { "tag", "emojianimated" },
-                { "frames", this.Frames.ToString() },
-                { "framesOverTime", this.FPS.ToString() },
-                { "animationStyle", GetEnumMemberAttrValue(this.AnimationStyle) },
-                { "maskTag", this.MaskTag.ToString() },
-                { "loopStyle", GetEnumMemberAttrValue(this.LoopStyle) }
-            };
-            return formParams;
+                var formParams = new Dictionary<string, string>
+                {
+                    { "tag", this.Tag },
+                    { "maskTag", this.MaskTag.ToString() }
+                };
+                return formParams;
+            }
+            else
+            {
+                var formParams = new Dictionary<string, string>
+                {
+                    { "tag", this.Tag },
+                    { "frames", this.Frames.ToString() },
+                    { "framesOverTime", this.FPS.ToString() },
+                    { "animationStyle", GetEnumMemberAttrValue(this.AnimationStyle) },
+                    { "maskTag", this.MaskTag.ToString() },
+                    { "loopStyle", GetEnumMemberAttrValue(this.LoopStyle) }
+                };
+                return formParams;
+            }
         }
     }
 }

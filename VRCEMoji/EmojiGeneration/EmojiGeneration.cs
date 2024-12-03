@@ -52,18 +52,30 @@ namespace VRCEMoji.EmojiGeneration
                         Rect cropSettings = (Rect)settings.CropSettings;
                         double cropWRatio = (double)256 / frames[i].Width;
                         double cropHRatio = (double)256 / frames[i].Height;
+                        
                         System.Drawing.Rectangle cropRect = new(
                             new System.Drawing.Point((int)(cropSettings.X / cropWRatio), (int)(cropSettings.Y / cropHRatio)),
                             new System.Drawing.Size((int)(cropSettings.Width / cropWRatio), (int)(cropSettings.Height / cropHRatio))
                         );
+                        var empty = new Image<Rgba32>(1024, 1024);
+                        var option = new ResizeOptions
+                        {
+                            Mode = settings.KeepRatio ? SixLabors.ImageSharp.Processing.ResizeMode.Pad : SixLabors.ImageSharp.Processing.ResizeMode.Stretch,
+                            Size = new SixLabors.ImageSharp.Size(gridSize, gridSize)
+                        };
                         frames[i].Mutate(
-                            i => i.Crop(new Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(gridSize, gridSize)
+                            i => i.Crop(new Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(option)
                         );
                     }
                     else
                     {
+                        var option = new ResizeOptions
+                        {
+                            Mode = settings.KeepRatio ? SixLabors.ImageSharp.Processing.ResizeMode.Pad : SixLabors.ImageSharp.Processing.ResizeMode.Stretch,
+                            Size = new SixLabors.ImageSharp.Size(gridSize, gridSize)
+                        };
                         frames[i].Mutate(
-                            i => i.Resize(gridSize, gridSize)
+                            i => i.Resize(option)
                         );
                     }
                     newFrames[j] = frames[i];
@@ -89,7 +101,7 @@ namespace VRCEMoji.EmojiGeneration
             {
                 frame.Dispose();
             }
-            return new GenerationResult(result, settings.Name, targetFrameCount, settings.FPS);
+            return new GenerationResult(result, settings.Name, targetFrameCount, settings.FPS, settings.generationType);
 
         }
 
@@ -109,7 +121,7 @@ namespace VRCEMoji.EmojiGeneration
             var fileApi = new EmojiApi.EmojiApi(client, client, authResult.Configuration);
             try
             {
-                List<EmojiFile> files = fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0);
+                List<EmojiFile> files = result.GenerationType == GenerationType.Emoji ? fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0) : fileApi.GetStickerFiles(authResult.CurrentUser.Id, 100, 0);
                 UploadDialog uploadDialog = new(result)
                 {
                     Owner = MainWindow.Instance
@@ -136,7 +148,7 @@ namespace VRCEMoji.EmojiGeneration
                 }
                 CreateEmojiRequest request = new(result, uploadSettings);
                 fileApi.CreateEmoji(request);
-                MessageBox.Show("Emoji uploaded successfully!");
+                MessageBox.Show((result.GenerationType == GenerationType.Emoji ? "Emoji" : "Sticker") + " uploaded successfully!");
             }
             catch (ApiException ex)
             {

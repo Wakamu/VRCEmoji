@@ -33,6 +33,8 @@ namespace VRCEMoji
             }
             chromaTypeBox.ItemsSource = Enum.GetValues(typeof(ChromaType)).Cast<ChromaType>();
             ConvertModeBox.ItemsSource = Enum.GetValues(typeof(GenerationMode)).Cast<GenerationMode>();
+            generationTypeBox.ItemsSource = Enum.GetValues(typeof(GenerationType)).Cast<GenerationType>();
+            generationTypeBox.SelectedItem = GenerationType.Emoji;
             _instance = this;
         }
 
@@ -114,7 +116,7 @@ namespace VRCEMoji
             {
                 FileName = "Image",
                 DefaultExt = ".gif",
-                Filter = "Gif (.gif)|*.gif"
+                Filter = "GIF|*.gif|JPG|*.jpg;*.jpeg|PNG|*.png"
             };
             bool? result = dialog.ShowDialog();
             if (result == true)
@@ -148,11 +150,13 @@ namespace VRCEMoji
                 return;
             }
             generationResult?.Dispose();
+            generationSettings.generationType = (GenerationType)generationTypeBox.SelectedItem;
             generationSettings.StartFrame = (int)startSlider.Value - 1;
-            generationSettings.EndFrame = (int)endSlider.Value - 1;
+            generationSettings.EndFrame = generationSettings.generationType == GenerationType.Emoji ? (int)endSlider.Value - 1 : generationSettings.StartFrame ;
             generationSettings.GenerationMode = (GenerationMode)ConvertModeBox.SelectedItem;
             generationSettings.CropSettings = null;
             generationSettings.ChromaSettings = null;
+            generationSettings.KeepRatio = keepRatio.IsChecked == true ? true: false;
             if (cropBox.IsChecked == true && rect != null) {
                 generationSettings.CropSettings = new Rect() { X = startPoint.X, Y = startPoint.Y, Width = rect.Width, Height = rect.Height };
             }
@@ -297,6 +301,57 @@ namespace VRCEMoji
         private void Window_ContentRendered(object sender, EventArgs e)
         {
             chromaTypeBox.SelectedIndex = 0;
+        }
+
+        private void generationTypeBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            this.save.IsEnabled = false;
+            this.upload.IsEnabled = false;
+            if ((GenerationType)generationTypeBox.SelectedItem == GenerationType.Emoji)
+            {
+                this.startSlider.Minimum = 1;
+                this.startSlider.Maximum = 1;
+                this.label1.Content = "Start:";
+                this.endSlider.Minimum = 1;
+                this.endSlider.Maximum = 1;
+                this.endSlider.IsEnabled = true;
+                this.endSlider.Visibility = Visibility.Visible;
+                this.label1_Copy.Visibility = Visibility.Visible;
+                this.label1_Copy1.Visibility = Visibility.Visible;
+                this.label2_Copy.Visibility = Visibility.Visible;
+                this.startSlider.Value = 0;
+                this.generate.IsEnabled = false;
+                this.chromaBox.IsEnabled = false;
+                this.logoff.IsEnabled = false;
+                ConvertModeBox.IsEnabled = false;
+                ConvertModeBox.Visibility = Visibility.Visible;
+                ConvertModeBox.SelectedItem = GenerationMode.Fluidity;
+                this.frameCountLabel.Content = "";
+                AnimationBehavior.SetSourceUri(this.originalGif, null);
+                SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, null);
+            } else if ((GenerationType)generationTypeBox.SelectedItem == GenerationType.Sticker)
+            {
+                this.startSlider.Minimum = 1;
+                this.startSlider.Maximum = 1;
+                this.label1.Content = "Frame:";
+                this.endSlider.Minimum = 1;
+                this.endSlider.Maximum = 1;
+                this.endSlider.IsEnabled = false;
+                this.endSlider.Visibility = Visibility.Hidden;
+                this.label1_Copy.Visibility = Visibility.Hidden;
+                this.label1_Copy1.Visibility = Visibility.Hidden;
+                this.label2_Copy.Visibility = Visibility.Hidden;
+                this.startSlider.Value = 0;
+                this.generate.IsEnabled = false;
+                this.chromaBox.IsEnabled = false;
+                this.logoff.IsEnabled = false;
+                ConvertModeBox.IsEnabled = false;
+                ConvertModeBox.Visibility = Visibility.Hidden;
+                ConvertModeBox.SelectedItem = GenerationMode.Quality;
+                this.frameCountLabel.Content = "";
+                AnimationBehavior.SetSourceUri(this.originalGif, null);
+                SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, null);
+            }
         }
     }
 }

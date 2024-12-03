@@ -52,11 +52,17 @@ namespace VRCEMoji.EmojiApi
 
         public List<EmojiFile> GetEmojiFiles(string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)
         {
-            VRChat.API.Client.ApiResponse<List<EmojiFile>> localVarResponse = GetEmojiFilesWithHttpInfo(userId, n, offset);
+            VRChat.API.Client.ApiResponse<List<EmojiFile>> localVarResponse = GetEmojiFilesWithHttpInfo("emoji", userId, n, offset);
             return localVarResponse.Data;
         }
 
-        public VRChat.API.Client.ApiResponse<List<EmojiFile>> GetEmojiFilesWithHttpInfo(string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)
+        public List<EmojiFile> GetStickerFiles(string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)
+        {
+            VRChat.API.Client.ApiResponse<List<EmojiFile>> localVarResponse = GetEmojiFilesWithHttpInfo("sticker", userId, n, offset);
+            return localVarResponse.Data;
+        }
+
+        public VRChat.API.Client.ApiResponse<List<EmojiFile>> GetEmojiFilesWithHttpInfo(string type, string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)
         {
             VRChat.API.Client.RequestOptions localVarRequestOptions = new();
 
@@ -89,7 +95,7 @@ namespace VRCEMoji.EmojiApi
             {
                 localVarRequestOptions.QueryParameters.Add(VRChat.API.Client.ClientUtils.ParameterToMultiMap("", "offset", offset));
             }
-            localVarRequestOptions.QueryParameters.Add(VRChat.API.Client.ClientUtils.ParameterToMultiMap("", "tag", "emoji"));
+            localVarRequestOptions.QueryParameters.Add(VRChat.API.Client.ClientUtils.ParameterToMultiMap("", "tag", type));
 
             localVarRequestOptions.Operation = "FilesApi.GetFiles";
             localVarRequestOptions.OperationIndex = operationIndex;

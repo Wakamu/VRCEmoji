@@ -13,6 +13,8 @@ namespace VRCEMoji.EmojiGeneration
 
         public Rect? CropSettings { get; set; } = cropSettings;
 
+        public GenerationType generationType = GenerationType.Emoji;
+
         public ChromaSettings? ChromaSettings { get; set; } = chromaSettings;
 
         public GenerationMode GenerationMode { get; set; } = GenerationMode.Fluidity;
@@ -20,6 +22,7 @@ namespace VRCEMoji.EmojiGeneration
         public int StartFrame { get; set; } = 1;
 
         public int EndFrame { get; set; } = image.Frames.Count;
+        public bool KeepRatio { get; set; } = false;
 
         public int TargetFrameCount {
             get
@@ -45,7 +48,7 @@ namespace VRCEMoji.EmojiGeneration
 
         public int GridSize
         {
-            get { return TargetFrameCount <= 4 ? 512 : (TargetFrameCount <= 16 ? 256 : 128); }
+            get { return TargetFrameCount < 2 ? 1024 : TargetFrameCount <= 4 ? 512 : (TargetFrameCount <= 16 ? 256 : 128); }
         }
 
         public int Frames { 
@@ -83,5 +86,14 @@ namespace VRCEMoji.EmojiGeneration
 
         [EnumMember(Value = "fluidity")]
         Fluidity = 3,
+    }
+
+    public enum GenerationType
+    {
+        [EnumMember(Value = "emoji")]
+        Emoji = 1,
+
+        [EnumMember(Value = "sticker")]
+        Sticker = 2,
     }
 }

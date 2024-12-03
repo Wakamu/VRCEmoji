@@ -15,6 +15,27 @@ namespace VRCEMoji
         public UploadDialog(GenerationResult result)
         {
             InitializeComponent();
+            if (result.GenerationType == GenerationType.Sticker)
+            {
+                fpsSlider.Visibility = Visibility.Hidden;
+                fpsLabel.Visibility = Visibility.Hidden;
+                fpsValue.Visibility = Visibility.Hidden;
+                styleBox.Visibility = Visibility.Hidden;
+                stylePreview.Visibility = Visibility.Hidden;
+                animationLabel.Visibility = Visibility.Hidden;
+                loopLabel.Visibility = Visibility.Hidden;
+                loopBox.Visibility = Visibility.Hidden;
+            } else
+            {
+                fpsSlider.Visibility = Visibility.Visible;
+                fpsLabel.Visibility = Visibility.Visible;
+                fpsValue.Visibility = Visibility.Visible;
+                styleBox.Visibility = Visibility.Visible;
+                stylePreview.Visibility = Visibility.Visible;
+                animationLabel.Visibility = Visibility.Visible;
+                loopLabel.Visibility = Visibility.Visible;
+                loopBox.Visibility = Visibility.Visible;
+            }
             styleBox.ItemsSource = Enum.GetValues(typeof(AnimationStyle)).Cast< AnimationStyle>();
             loopBox.ItemsSource = Enum.GetValues(typeof(LoopStyle)).Cast< LoopStyle>();
             fpsSlider.Value = result.FPS;
