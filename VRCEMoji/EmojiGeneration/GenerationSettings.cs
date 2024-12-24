@@ -24,6 +24,8 @@ namespace VRCEMoji.EmojiGeneration
         public int EndFrame { get; set; } = image.Frames.Count;
         public bool KeepRatio { get; set; } = false;
 
+        public double Zoom { get; set; } = 1;
+
         public int TargetFrameCount {
             get
             {

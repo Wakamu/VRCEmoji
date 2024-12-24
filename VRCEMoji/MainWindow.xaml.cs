@@ -45,7 +45,7 @@ namespace VRCEMoji
             if (this.chromaPicker && this.generationSettings != null)
             {
                 System.Windows.Point p = e.GetPosition(canvas);
-                int frameIndex = AnimationBehavior.GetAnimator(originalGif).CurrentFrameIndex;
+                int frameIndex = AnimationBehavior.GetAnimator(originalGif)?.CurrentFrameIndex ?? 0;
                 var currentFrame = this.generationSettings.Image.Frames[frameIndex];
                 double cropWRatio = (double)256 / currentFrame.Width;
                 double cropHRatio = (double)256 / currentFrame.Height;
@@ -68,7 +68,7 @@ namespace VRCEMoji
                 this.chromaBox.IsEnabled = true;
                 this.logoff.IsEnabled = true;
                 this.ConvertModeBox.IsEnabled = true;
-                AnimationBehavior.GetAnimator(originalGif).Play();
+                AnimationBehavior.GetAnimator(originalGif)?.Play();
             }
             else if (this.cropBox.IsChecked == true)
             {
@@ -116,7 +116,7 @@ namespace VRCEMoji
             {
                 FileName = "Image",
                 DefaultExt = ".gif",
-                Filter = "GIF|*.gif|JPG|*.jpg;*.jpeg|PNG|*.png"
+                Filter = "Image File|*.gif;*.jpg;*.jpeg;*.png;*.webp"
             };
             bool? result = dialog.ShowDialog();
             if (result == true)
@@ -157,6 +157,7 @@ namespace VRCEMoji
             generationSettings.CropSettings = null;
             generationSettings.ChromaSettings = null;
             generationSettings.KeepRatio = keepRatio.IsChecked == true ? true: false;
+            generationSettings.Zoom = zoomSlider.Value;
             if (cropBox.IsChecked == true && rect != null) {
                 generationSettings.CropSettings = new Rect() { X = startPoint.X, Y = startPoint.Y, Width = rect.Width, Height = rect.Height };
             }
@@ -251,7 +252,7 @@ namespace VRCEMoji
             this.logoff.IsEnabled = false;
             this.ConvertModeBox.IsEnabled = false;
             Mouse.OverrideCursor = Cursors.Cross;
-            AnimationBehavior.GetAnimator(originalGif).Pause();
+            AnimationBehavior.GetAnimator(originalGif)?.Pause();
         }
 
         private void chromaBox_Checked(object sender, RoutedEventArgs e)

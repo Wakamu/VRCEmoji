@@ -78,6 +78,14 @@ namespace VRCEMoji.EmojiGeneration
                             i => i.Resize(option)
                         );
                     }
+                    var optionZoom = new ResizeOptions
+                    {
+                        Mode = SixLabors.ImageSharp.Processing.ResizeMode.Crop,
+                        Size = new SixLabors.ImageSharp.Size((int) (gridSize * settings.Zoom), (int)(gridSize * settings.Zoom)),
+                    };
+                    frames[i].Mutate(
+                        i => i.Resize(optionZoom)
+                    );
                     newFrames[j] = frames[i];
                     j++;
                 }
@@ -85,7 +93,6 @@ namespace VRCEMoji.EmojiGeneration
             int maxline = 1024 / gridSize;
             var result = new Image<Rgba32>(1024, 1024);
             int currentFrame = 0;
-
             foreach (var frame in newFrames)
             {
                 result.Mutate(o => o
