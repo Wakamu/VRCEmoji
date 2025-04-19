@@ -7,6 +7,7 @@ using XamlAnimatedGif;
 using System.Windows.Media;
 using VRCEMoji.EmojiApi;
 using VRCEMoji.EmojiGeneration;
+using Octokit;
 
 namespace VRCEMoji
 {
@@ -24,6 +25,7 @@ namespace VRCEMoji
         public MainWindow()
         {
             InitializeComponent();
+            checkUpdate();
             AnimationBehavior.SetCacheFramesInMemory(this.originalGif, true);
             StoredConfig? authConfig = Authentication.Instance.StoredConfig;
             if (authConfig != null )
@@ -36,6 +38,22 @@ namespace VRCEMoji
             generationTypeBox.ItemsSource = Enum.GetValues(typeof(GenerationType)).Cast<GenerationType>();
             generationTypeBox.SelectedItem = GenerationType.Emoji;
             _instance = this;
+        }
+
+        private async void checkUpdate()
+        {
+            GitHubClient updateClient = new GitHubClient(new ProductHeaderValue("VRCEmoji"));
+            try
+            {
+                Release latest = await updateClient.Repository.Release.GetLatest("Wakamu", "VRCEmoji");
+                if (latest.TagName != "v1.7.0")
+                {
+                    MessageBox.Show("Update available ("+ latest.TagName+ ") at https://github.com/Wakamu/VRCEmoji/releases", "Update Available!");
+                }
+            } catch (Exception ex)
+            {
+
+            }
         }
 
         public static MainWindow? Instance { get { return _instance; } }
