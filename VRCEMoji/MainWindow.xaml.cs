@@ -8,6 +8,7 @@ using System.Windows.Media;
 using VRCEMoji.EmojiApi;
 using VRCEMoji.EmojiGeneration;
 using Octokit;
+using System.Diagnostics;
 
 namespace VRCEMoji
 {
@@ -46,9 +47,13 @@ namespace VRCEMoji
             try
             {
                 Release latest = await updateClient.Repository.Release.GetLatest("Wakamu", "VRCEmoji");
-                if (latest.TagName != "v1.7.0")
+                if (latest.TagName != "v1.8.0")
                 {
-                    MessageBox.Show("Update available ("+ latest.TagName+ ") at https://github.com/Wakamu/VRCEmoji/releases", "Update Available!");
+                    if ( MessageBox.Show("Update available ("+ latest.TagName+ "). Do you want to download it?", "Update Available!", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    {
+                        string url = "http://github.com/Wakamu/VRCEmoji/releases/latest";
+                        Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                    }
                 }
             } catch (Exception ex)
             {
