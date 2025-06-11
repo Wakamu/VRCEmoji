@@ -17,10 +17,12 @@
             <ColumnDefinition Width="30" />
         </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
-            <RowDefinition Height="80"/>
+            <RowDefinition Height="40"/>
             <RowDefinition Height="*" />
             <RowDefinition Height="*" />
-            <RowDefinition Height="50" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="10" />
         </Grid.RowDefinitions>
         <Image x:Name="Emoji1" Grid.Column="1" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
         <Image x:Name="Emoji2" Grid.Column="2" HorizontalAlignment="Center" Grid.Row="1" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
@@ -31,7 +33,16 @@
         <Image x:Name="Emoji7" Grid.Column="2" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
         <Image x:Name="Emoji8" Grid.Column="3" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
         <Image x:Name="Emoji9" Grid.Column="4" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
-        <Button x:Name="cancel" IsCancel="True" Grid.Column="5" Content="Cancel" HorizontalAlignment="Center" Height="40" Grid.Row="3" VerticalAlignment="Center" Width="100" FontSize="14" Background="#FFC680F9"/>
+        <Image x:Name="Emoji10" Grid.Column="5" HorizontalAlignment="Center" Grid.Row="2" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji11" Grid.Column="1" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji12" Grid.Column="2" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji13" Grid.Column="3" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji14" Grid.Column="4" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji15" Grid.Column="5" HorizontalAlignment="Center" Grid.Row="3" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji16" Grid.Column="1" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji17" Grid.Column="2" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Image x:Name="Emoji18" Grid.Column="3" HorizontalAlignment="Center" Grid.Row="4" VerticalAlignment="Center" Cursor="Hand" MouseLeftButtonDown="Emoji_MouseLeftButtonDown" Margin="1,1,1,1" />
+        <Button x:Name="cancel" IsCancel="True" Grid.Column="5" Content="Cancel" HorizontalAlignment="Center" Height="40" Grid.Row="4" VerticalAlignment="Center" Width="100" FontSize="14" Background="#FFC680F9"/>
         <Label x:Name="label" Grid.Row="0" Grid.Column="1" Content="Maximum amount of emoji uploaded, select one to replace:" Grid.ColumnSpan="5" HorizontalAlignment="Left" Height="30" VerticalAlignment="Bottom" Width="617" Foreground="White" FontSize="16" Margin="0,0,0,10"/>
 
     </Grid>

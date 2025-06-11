@@ -18,7 +18,7 @@ namespace VRCEMoji
         {
             InitializeComponent();
             this.files = files;
-            Image[] images = { Emoji1, Emoji2, Emoji3, Emoji4, Emoji5, Emoji6, Emoji7, Emoji8, Emoji9 };
+            Image[] images = { Emoji1, Emoji2, Emoji3, Emoji4, Emoji5, Emoji6, Emoji7, Emoji8, Emoji9, Emoji10, Emoji11, Emoji12, Emoji13, Emoji14, Emoji15, Emoji16, Emoji17, Emoji18 };
             int i = 0;
             foreach (EmojiFile file in files)
             {

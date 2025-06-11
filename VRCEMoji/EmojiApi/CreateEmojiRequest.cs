@@ -50,7 +50,7 @@ namespace VRCEMoji.EmojiApi
             Image = generationResult.Image;
             Name = generationResult.Name + "_" + generationResult.Frames + "frames_" + FPS + "fps.png";
             Extension = ".png";
-            Tag = generationResult.GenerationType == GenerationType.Emoji ? "emojianimated" : "sticker";
+            Tag = generationResult.GenerationType == GenerationType.Emoji ? (generationResult.Frames > 1 ? "emojianimated" : "emoji") : "sticker";
         }
 
         public Dictionary<string, string> GetFormParams()

@@ -138,7 +138,7 @@ namespace VRCEMoji.EmojiGeneration
                     return authResult;
                 }
                 UploadSettings uploadSettings = uploadDialog.Settings;
-                if (files.Count >= 9)
+                if (files.Count >= 18)
                 {
                     ReplaceDialog replaceDialog = new(files)
                     {
