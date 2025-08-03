@@ -47,7 +47,7 @@ namespace VRCEMoji
             try
             {
                 Release latest = await updateClient.Repository.Release.GetLatest("Wakamu", "VRCEmoji");
-                if (latest.TagName != "v1.8.0")
+                if (latest.TagName != "v1.9.0")
                 {
                     if ( MessageBox.Show("Update available ("+ latest.TagName+ "). Do you want to download it?", "Update Available!", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
@@ -353,6 +353,9 @@ namespace VRCEMoji
                 this.frameCountLabel.Content = "";
                 AnimationBehavior.SetSourceUri(this.originalGif, null);
                 SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, null);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
             } else if ((GenerationType)generationTypeBox.SelectedItem == GenerationType.Sticker)
             {
                 this.startSlider.Minimum = 1;
@@ -375,6 +378,9 @@ namespace VRCEMoji
                 this.frameCountLabel.Content = "";
                 AnimationBehavior.SetSourceUri(this.originalGif, null);
                 SpriteSheetBehaviour.SetSpriteSheet(this.resultBrush, null);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
             }
         }
     }

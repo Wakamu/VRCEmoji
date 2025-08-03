@@ -108,6 +108,7 @@ namespace VRCEMoji.EmojiGeneration
             {
                 frame.Dispose();
             }
+            SixLabors.ImageSharp.Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
             return new GenerationResult(result, settings.Name, targetFrameCount, settings.FPS, settings.generationType);
 
         }
