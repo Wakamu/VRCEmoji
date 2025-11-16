@@ -43,7 +43,7 @@
   <ItemGroup>
     <PackageReference Include="Octokit" Version="14.0.0" />
     <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
-    <PackageReference Include="VRChat.API" Version="1.19.2" />
+    <PackageReference Include="VRChat.API" Version="1.20.4" />
     <PackageReference Include="XamlAnimatedGif" Version="2.3.1" />
   </ItemGroup>
 

@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System.IO;
 using VRChat.API.Api;
 using VRChat.API.Client;
@@ -137,12 +138,24 @@ namespace VRCEMoji.EmojiApi
                 }
                 var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
                 var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
-                CurrentUser user = (CurrentUser)currentUserResp.Content;
+                var settings = new JsonSerializerSettings
+                {
+                    Error = (sender, args) =>
+                    {
+                        args.ErrorContext.Handled = true;
+                    }
+                };
+                var serializer = JsonSerializer.Create(settings);
+                var jObj = JObject.Parse(currentUserResp.RawContent);
+                CurrentUser? user = jObj.ToObject<CurrentUser>(serializer);
+                if (user is null) {
+                    return result;
+                }
                 if (authCookie != null && f2aCookie != null)
                 {
                     var auth = authCookie.Value;
                     var f2a = f2aCookie.Value;
-                    CreateStoredConfig(config, auth, f2a, user.DisplayName);
+                    CreateStoredConfig(config, auth, f2a, user.DisplayName ?? "null");
                 }
                 result.Success = true;
                 result.CurrentUser = user;

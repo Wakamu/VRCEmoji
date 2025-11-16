@@ -47,7 +47,7 @@ namespace VRCEMoji
             try
             {
                 Release latest = await updateClient.Repository.Release.GetLatest("Wakamu", "VRCEmoji");
-                if (latest.TagName != "v1.9.0")
+                if (latest.TagName != "v1.10.0")
                 {
                     if ( MessageBox.Show("Update available ("+ latest.TagName+ "). Do you want to download it?", "Update Available!", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
                     {
