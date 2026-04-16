@@ -1,0 +1,93 @@
+<UserControl x:Class="VRCEMoji.ManageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed">
+
+    <Grid>
+        <!-- Filter bar -->
+        <DockPanel DockPanel.Dock="Top" Margin="12,12,12,8"
+                   VerticalAlignment="Top">
+            <TextBlock Text="Filter:"
+                       FontSize="10"
+                       Foreground="{StaticResource TextSecondaryBrush}"
+                       VerticalAlignment="Center"
+                       Margin="0,0,8,0" />
+            <ComboBox x:Name="filterBox"
+                      Style="{StaticResource DarkComboBox}"
+                      Width="120"
+                      HorizontalAlignment="Left"
+                      SelectionChanged="filterBox_SelectionChanged" />
+            <Button x:Name="refreshBtn" Content="Refresh"
+                    Style="{StaticResource SecondaryButton}"
+                    DockPanel.Dock="Right"
+                    HorizontalAlignment="Right"
+                    Padding="8,2" FontSize="10"
+                    Click="refreshBtn_Click" />
+        </DockPanel>
+
+        <!-- Main content area -->
+        <Grid Margin="12,44,12,12">
+            <!-- Empty state -->
+            <TextBlock x:Name="emptyText"
+                       Text="Log in to manage your emojis and stickers"
+                       FontSize="11"
+                       Foreground="{StaticResource TextDisabledBrush}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center" />
+
+            <!-- Loading spinner -->
+            <StackPanel x:Name="loadingPanel"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                <TextBlock Text="Loading..."
+                           FontSize="11"
+                           Foreground="{StaticResource TextDisabledBrush}"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <!-- Scrollable emoji/sticker grid -->
+            <ScrollViewer x:Name="gridScroller"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Visibility="Collapsed">
+                <ScrollViewer.Resources>
+                    <Style TargetType="ScrollBar" BasedOn="{StaticResource DarkScrollBar}"/>
+                </ScrollViewer.Resources>
+                <ItemsControl x:Name="fileGrid">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Width="80" Height="100"
+                                    Margin="4"
+                                    Background="{StaticResource BackgroundDeepestBrush}"
+                                    BorderBrush="{StaticResource BorderInputBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Cursor="Hand"
+                                    MouseLeftButtonDown="File_Click">
+                                <StackPanel VerticalAlignment="Center"
+                                            HorizontalAlignment="Center">
+                                    <Image Source="{Binding Thumbnail}"
+                                           Width="56" Height="56"
+                                           Stretch="Uniform"
+                                           Margin="0,4,0,4" />
+                                    <TextBlock Text="{Binding TypeLabel}"
+                                               FontSize="9"
+                                               Foreground="{StaticResource TextDisabledBrush}"
+                                               HorizontalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               MaxWidth="72" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>
