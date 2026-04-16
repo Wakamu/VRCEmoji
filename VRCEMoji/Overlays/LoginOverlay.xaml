@@ -1,0 +1,87 @@
+<UserControl x:Class="VRCEMoji.Overlays.LoginOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed"
+             PreviewKeyDown="UserControl_PreviewKeyDown">
+    <Grid>
+        <!-- Backdrop -->
+        <Border Background="#99000000"
+                MouseLeftButtonDown="Backdrop_Click" />
+
+        <!-- Centered card -->
+        <Border Background="{StaticResource BackgroundPanelBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="32"
+                MinWidth="360" MaxWidth="420"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="60" ShadowDepth="20" Opacity="0.5" />
+            </Border.Effect>
+
+            <StackPanel>
+                <!-- Title -->
+                <TextBlock Text="Sign in to VRChat"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,0,4" />
+
+                <!-- Subtitle -->
+                <TextBlock Text="Required for uploading emojis"
+                           FontSize="12"
+                           Foreground="{StaticResource TextDisabledBrush}"
+                           Margin="0,0,0,12" />
+
+                <!-- Error message -->
+                <Border x:Name="errorBorder" Visibility="Collapsed"
+                        Background="#20EF4444" CornerRadius="4"
+                        Padding="10,8" Margin="0,0,0,12">
+                    <TextBlock x:Name="errorText" Text=""
+                               FontSize="11"
+                               Foreground="{StaticResource StatusErrorBrush}"
+                               TextWrapping="Wrap" />
+                </Border>
+
+                <!-- Username -->
+                <TextBlock Text="Username"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,6" />
+                <TextBox x:Name="loginBox"
+                         Style="{StaticResource DarkTextBox}"
+                         Height="34" FontSize="13"
+                         Margin="0,0,0,14" />
+
+                <!-- Password -->
+                <TextBlock Text="Password"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,6" />
+                <PasswordBox x:Name="passwordBox"
+                             Style="{StaticResource DarkPasswordBox}"
+                             Height="34" FontSize="13"
+                             Margin="0,0,0,24" />
+
+                <!-- Buttons -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Content="Cancel"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Cancel_Click" />
+                    <Button Grid.Column="2"
+                            Content="Sign In"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="SignIn_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

@@ -13,7 +13,8 @@ namespace VRCEMoji
 
         private readonly ImageBrush brush;
         private DateTime instanceTime;
-        private readonly int frames, rows, columns, width, height;
+        private readonly int frames, rows, columns;
+        private int width, height;
         private int fps;
         private readonly MatrixTransform transform;
         private LoopStyle loopStyle;
@@ -31,6 +32,16 @@ namespace VRCEMoji
             this.transform = new MatrixTransform();
             brush.Transform = transform;
             loopStyle = LoopStyle.Linear;
+        }
+
+        public static void UpdateDisplaySize(ImageBrush brush, int displayWidth, int displayHeight)
+        {
+            SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
+            if (behaviour is not null)
+            {
+                behaviour.width = displayWidth;
+                behaviour.height = displayHeight;
+            }
         }
 
         public static void UpdateSpriteSheet(ImageBrush brush, int fps, LoopStyle? loopStyle = null)

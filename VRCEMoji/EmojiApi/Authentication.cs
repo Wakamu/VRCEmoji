@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
 using VRChat.API.Api;
@@ -9,6 +9,14 @@ namespace VRCEMoji.EmojiApi
 {
     internal sealed class Authentication
     {
+        private const string UserAgent = "VRCEmoji/1.2.0 wakamu";
+
+        private static readonly JsonSerializerSettings ParseUserSettings = new()
+        {
+            Error = (sender, args) => { args.ErrorContext.Handled = true; }
+        };
+        private static readonly JsonSerializer ParseUserSerializer = JsonSerializer.Create(ParseUserSettings);
+
         public readonly string StoragePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji");
 
         private StoredConfig? _storedConfig;
@@ -31,38 +39,53 @@ namespace VRCEMoji.EmojiApi
         {
             get
             {
-                if (_apiConfig is null)
+                if (_apiConfig is null && _storedConfig != null)
                 {
                     Configuration config = new()
                     {
-                        UserAgent = "VRCEmoji/1.2.0 wakamu"
+                        UserAgent = UserAgent
                     };
-                    if (this._storedConfig != null)
-                    {
-                        config.Username = _storedConfig.Username;
-                        config.Password = _storedConfig.Password;
-                        config.DefaultHeaders.Add("Cookie", "auth=" + _storedConfig.Auth + ";twoFactorAuth=" + _storedConfig.TwoKey);
-                        _apiConfig = config;
-                    }
-                    else
-                    {
-                        LoginDialog loginDialog = new() { Owner = MainWindow.Instance };
-                        if (loginDialog.ShowDialog() == true)
-                        {
-                            config.Username = loginDialog.Login;
-                            config.Password = loginDialog.Password;
-                            _apiConfig = config;
-                        }
-                    }
-                    
+                    config.Username = _storedConfig.Username;
+                    config.Password = _storedConfig.Password;
+                    config.DefaultHeaders.Add("Cookie", "auth=" + _storedConfig.Auth + ";twoFactorAuth=" + _storedConfig.TwoKey);
+                    _apiConfig = config;
                 }
                 return _apiConfig;
             }
         }
 
+        public Configuration CreateConfig(string username, string password)
+        {
+            Configuration config = new()
+            {
+                UserAgent = UserAgent,
+                Username = username,
+                Password = password
+            };
+            _apiConfig = config;
+            return config;
+        }
+
+        public void FinalizeAuth(ApiResponse<CurrentUser> currentUserResp, Configuration config)
+        {
+            var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
+            var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
+            if (authCookie != null && f2aCookie != null)
+            {
+                CreateStoredConfig(config, authCookie.Value, f2aCookie.Value,
+                    ParseUser(currentUserResp)?.DisplayName ?? "null");
+            }
+        }
+
+        public CurrentUser? ParseUser(ApiResponse<CurrentUser> currentUserResp)
+        {
+            var jObj = JObject.Parse(currentUserResp.RawContent);
+            return jObj.ToObject<CurrentUser>(ParseUserSerializer);
+        }
+
         public StoredConfig? StoredConfig
-        { 
-            get { 
+        {
+            get {
                 _storedConfig ??= ReadStoredConfig();
                 return _storedConfig;
             }
@@ -84,91 +107,6 @@ namespace VRCEMoji.EmojiApi
             this._apiConfig = null;
         }
 
-        public AuthResult HandleAuth()
-        {
-            Configuration? config = ApiConfig;
-            AuthResult result = new();
-            if (config == null)
-            {
-                return result;
-            }
-            bool logged = false;
-            CustomApiClient client = new();
-            AuthenticationApi authApi = new(client, client, config);
-            try
-            {
-                ApiResponse<CurrentUser> currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                bool cancelOperation = false;
-                logged = true;
-                if (!IsAuthed(currentUserResp) && !cancelOperation)
-                {
-                    if (RequiresEmail2FA(currentUserResp))
-                    {
-                        InputDialog inputDialog = new("Please verify with the OTP code sent to your email.")
-                        {
-                            Owner = MainWindow.Instance
-                        };
-                        if (inputDialog.ShowDialog() == true)
-                        {
-                            authApi.Verify2FAEmailCode(new TwoFactorEmailCode(inputDialog.Answer));
-                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                        }
-                        else
-                        {
-                            cancelOperation = true;
-                        }
-                    }
-                    else
-                    {
-                        InputDialog inputDialog = new("Please verify with your double authentication code.")
-                        {
-                            Owner = MainWindow.Instance
-                        };
-                        if (inputDialog.ShowDialog() == true)
-                        {
-                            authApi.Verify2FA(new TwoFactorAuthCode(inputDialog.Answer));
-                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                        }
-                        else { cancelOperation = true; }
-                    }
-                }
-                if (cancelOperation)
-                {
-                    return result;
-                }
-                var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
-                var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
-                var settings = new JsonSerializerSettings
-                {
-                    Error = (sender, args) =>
-                    {
-                        args.ErrorContext.Handled = true;
-                    }
-                };
-                var serializer = JsonSerializer.Create(settings);
-                var jObj = JObject.Parse(currentUserResp.RawContent);
-                CurrentUser? user = jObj.ToObject<CurrentUser>(serializer);
-                if (user is null) {
-                    return result;
-                }
-                if (authCookie != null && f2aCookie != null)
-                {
-                    var auth = authCookie.Value;
-                    var f2a = f2aCookie.Value;
-                    CreateStoredConfig(config, auth, f2a, user.DisplayName ?? "null");
-                }
-                result.Success = true;
-                result.CurrentUser = user;
-                result.Configuration = config;
-                return result;
-            }
-            catch (ApiException)
-            {
-                result.ErrorMessage = logged ? "An error occured with the two factor authentication." : "Invalid username/password.";
-                return result;
-            }
-        }
-
         private void CreateStoredConfig(Configuration config, string auth, string twoKey, string displayName)
         {
             System.IO.File.Delete(this.StoragePath + "\\account.json");
@@ -184,7 +122,7 @@ namespace VRCEMoji.EmojiApi
             this._storedConfig = storedConfig;
         }
 
-        static bool RequiresEmail2FA(ApiResponse<CurrentUser> resp)
+        public static bool RequiresEmail2FA(ApiResponse<CurrentUser> resp)
         {
             if (resp.RawContent.Contains("emailOtp"))
             {
@@ -194,7 +132,7 @@ namespace VRCEMoji.EmojiApi
             return false;
         }
 
-        static bool IsAuthed(ApiResponse<CurrentUser> resp)
+        public static bool IsAuthed(ApiResponse<CurrentUser> resp)
         {
             if (resp.RawContent.Contains("displayName"))
             {

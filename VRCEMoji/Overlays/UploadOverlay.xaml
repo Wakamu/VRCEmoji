@@ -1,0 +1,146 @@
+<UserControl x:Class="VRCEMoji.Overlays.UploadOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:gif="clr-namespace:XamlAnimatedGif;assembly=XamlAnimatedGif"
+             Visibility="Collapsed"
+             PreviewKeyDown="UserControl_PreviewKeyDown">
+    <Grid>
+        <!-- Backdrop -->
+        <Border Background="#99000000"
+                MouseLeftButtonDown="Backdrop_Click" />
+
+        <!-- Centered card -->
+        <Border Background="{StaticResource BackgroundPanelBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="32"
+                MinWidth="380" MaxWidth="440"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="60" ShadowDepth="20" Opacity="0.5" />
+            </Border.Effect>
+
+            <StackPanel>
+                <!-- Title -->
+                <TextBlock Text="Upload Settings"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,0,20" />
+
+                <!-- Preview + FPS/Loop row -->
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Sprite sheet preview -->
+                    <Border Grid.Column="0"
+                            Background="{StaticResource BackgroundDeepestBrush}"
+                            BorderBrush="{StaticResource BorderSubtleBrush}"
+                            BorderThickness="1" CornerRadius="6"
+                            Width="88" Height="88">
+                        <Rectangle Width="80" Height="80" StrokeThickness="0">
+                            <Rectangle.Fill>
+                                <ImageBrush x:Name="resultBrush"
+                                            Stretch="UniformToFill"
+                                            AlignmentX="Left"
+                                            AlignmentY="Top">
+                                    <ImageBrush.Transform>
+                                        <MatrixTransform x:Name="SpriteSheetOffset" />
+                                    </ImageBrush.Transform>
+                                </ImageBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                    </Border>
+
+                    <!-- FPS + Loop controls -->
+                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                        <!-- FPS -->
+                        <TextBlock Text="FPS"
+                                   FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,4" />
+                        <Grid x:Name="fpsSliderRow" Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="fpsSlider"
+                                    Grid.Column="0"
+                                    Style="{StaticResource DarkSlider}"
+                                    Minimum="1"
+                                    Maximum="64"
+                                    IsSnapToTickEnabled="True"
+                                    TickFrequency="1"
+                                    SmallChange="1"
+                                    LargeChange="5"
+                                    IsMoveToPointEnabled="True"
+                                    VerticalAlignment="Center"
+                                    ValueChanged="fpsSlider_ValueChanged" />
+                            <TextBlock x:Name="fpsValue"
+                                       Grid.Column="2"
+                                       FontSize="12"
+                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       VerticalAlignment="Center"
+                                       MinWidth="28"
+                                       TextAlignment="Right" />
+                        </Grid>
+
+                        <!-- Loop style -->
+                        <TextBlock Text="Loop Style"
+                                   FontSize="12"
+                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                   Margin="0,0,0,4" />
+                        <ComboBox x:Name="loopBox"
+                                  Style="{StaticResource DarkComboBox}"
+                                  SelectionChanged="loopBox_SelectionChanged" />
+                    </StackPanel>
+                </Grid>
+
+                <!-- Animation style -->
+                <TextBlock x:Name="animationLabel"
+                           Text="Animation Style"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,6" />
+                <ComboBox x:Name="styleBox"
+                          Style="{StaticResource DarkComboBox}"
+                          SelectionChanged="styleBox_SelectionChanged"
+                          Margin="0,0,0,12" />
+                <Border Background="{StaticResource BackgroundDeepestBrush}"
+                        BorderBrush="{StaticResource BorderSubtleBrush}"
+                        BorderThickness="1" CornerRadius="6"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,24"
+                        Padding="8">
+                    <Image x:Name="stylePreview"
+                           Width="96"
+                           Height="96" />
+                </Border>
+
+                <!-- Buttons -->
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Content="Cancel"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Cancel_Click" />
+                    <Button Grid.Column="2"
+                            Content="Upload"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="Upload_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
