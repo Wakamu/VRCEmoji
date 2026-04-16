@@ -1,0 +1,135 @@
+<UserControl x:Class="VRCEMoji.Overlays.EditOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed"
+             PreviewKeyDown="UserControl_PreviewKeyDown">
+    <Grid>
+        <!-- Backdrop -->
+        <Border Background="#99000000"
+                MouseLeftButtonDown="Backdrop_Click" />
+
+        <!-- Centered card -->
+        <Border Background="{StaticResource BackgroundPanelBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="32"
+                MinWidth="400" MaxWidth="460"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="60" ShadowDepth="20" Opacity="0.5" />
+            </Border.Effect>
+
+            <StackPanel>
+                <!-- Title -->
+                <TextBlock Text="Edit Emoji"
+                           x:Name="titleText"
+                           FontSize="18"
+                           FontWeight="SemiBold"
+                           Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,0,16" />
+
+                <!-- Preview image -->
+                <Border Background="{StaticResource BackgroundDeepestBrush}"
+                        BorderBrush="{StaticResource BorderSubtleBrush}"
+                        BorderThickness="1" CornerRadius="6"
+                        Width="96" Height="96"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,16">
+                    <Image x:Name="previewImage"
+                           Width="80" Height="80"
+                           Stretch="Uniform" />
+                </Border>
+
+                <!-- Name field -->
+                <TextBlock Text="Name"
+                           FontSize="10"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,4" />
+                <TextBox x:Name="nameBox"
+                         Style="{StaticResource DarkTextBox}"
+                         Margin="0,0,0,12" />
+
+                <!-- Animation Style (emoji only) -->
+                <TextBlock x:Name="animStyleLabel" Text="Animation Style"
+                           FontSize="10"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,4" />
+                <ComboBox x:Name="animStyleBox"
+                          Style="{StaticResource DarkComboBox}"
+                          Margin="0,0,0,12" />
+
+                <!-- Loop Style (emoji only) -->
+                <TextBlock x:Name="loopStyleLabel" Text="Loop Style"
+                           FontSize="10"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,4" />
+                <ComboBox x:Name="loopStyleBox"
+                          Style="{StaticResource DarkComboBox}"
+                          Margin="0,0,0,12" />
+
+                <!-- FPS (animated emoji only) -->
+                <TextBlock x:Name="fpsLabel" Text="FPS"
+                           FontSize="10"
+                           Foreground="{StaticResource TextSecondaryBrush}"
+                           Margin="0,0,0,4" />
+                <Grid x:Name="fpsRow" Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="fpsSlider"
+                            Grid.Column="0"
+                            Style="{StaticResource DarkSlider}"
+                            Minimum="1" Maximum="64"
+                            IsSnapToTickEnabled="True"
+                            TickFrequency="1"
+                            SmallChange="1"
+                            ValueChanged="fpsSlider_ValueChanged" />
+                    <TextBlock x:Name="fpsValue"
+                               Grid.Column="2"
+                               FontSize="12"
+                               Foreground="{StaticResource TextPrimaryBrush}"
+                               VerticalAlignment="Center"
+                               MinWidth="28"
+                               TextAlignment="Right" />
+                </Grid>
+
+                <!-- Action buttons -->
+                <Grid Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Content="Save Changes"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="Save_Click" />
+                    <Button Grid.Column="2"
+                            Content="Replace Image"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="ReplaceImage_Click" />
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0"
+                            Content="Delete"
+                            Style="{StaticResource DangerButton}"
+                            Click="Delete_Click" />
+                    <Button Grid.Column="2"
+                            Content="Cancel"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="Cancel_Click" />
+                </Grid>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>
