@@ -15,7 +15,7 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - run: dotnet publish VRCEMoji/VRCEMoji.csproj -c Release -r win-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o publish
+      - run: dotnet publish VRCEMoji/VRCEMoji.csproj -c Release -r win-x64 --no-self-contained -p:PublishSingleFile=true -o publish
 
       - name: Create release
         env:
