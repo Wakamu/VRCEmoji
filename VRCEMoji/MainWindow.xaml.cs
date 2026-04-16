@@ -16,6 +16,7 @@ using VRCEmoji.EmojiApi;
 
 using Configuration = VRChat.API.Client.Configuration;
 using ApiException = VRChat.API.Client.ApiException;
+using VRCEMoji.Overlays;
 
 namespace VRCEMoji
 {
@@ -29,6 +30,8 @@ namespace VRCEMoji
         private Rgba32 chromaColor;
         public string? loadedName;
         private static MainWindow? _instance;
+        private string? _pendingReplacementId;
+        private bool _manageNeedsRefresh;
 
         public MainWindow()
         {
@@ -45,6 +48,8 @@ namespace VRCEMoji
             generationTypeBox.ItemsSource = Enum.GetValues(typeof(GenerationType)).Cast<GenerationType>();
             generationTypeBox.SelectedItem = GenerationType.Emoji;
             _instance = this;
+            manageView.FileClicked += ManageView_FileClicked;
+            _manageNeedsRefresh = true;
             RestoreWindowState();
         }
 
@@ -414,7 +419,8 @@ namespace VRCEMoji
                 inputOverlay.Visibility == Visibility.Visible ||
                 uploadOverlay.Visibility == Visibility.Visible ||
                 replaceOverlay.Visibility == Visibility.Visible ||
-                statusOverlay.Visibility == Visibility.Visible)
+                statusOverlay.Visibility == Visibility.Visible ||
+                editOverlay.Visibility == Visibility.Visible)
                 return;
 
             if (Keyboard.Modifiers == ModifierKeys.Control)
@@ -599,6 +605,25 @@ namespace VRCEMoji
                 CreateEmojiRequest request = new(generationResult, uploadResult.Settings);
                 await Task.Run(() => fileApi.CreateEmoji(request));
                 await statusOverlay.ShowSuccess((generationResult.GenerationType == GenerationType.Emoji ? "Emoji" : "Sticker") + " uploaded successfully!");
+
+                // Handle pending replacement: delete old file and switch back to Manage
+                if (_pendingReplacementId != null)
+                {
+                    try
+                    {
+                        statusOverlay.ShowLoading("Removing old file...");
+                        await Task.Run(() => fileApi.DeleteFile(_pendingReplacementId));
+                        _pendingReplacementId = null;
+                        _manageNeedsRefresh = true;
+                        await statusOverlay.ShowSuccess("Replacement complete!");
+                        manageTab.IsChecked = true;
+                    }
+                    catch (ApiException delEx)
+                    {
+                        _pendingReplacementId = null;
+                        await statusOverlay.ShowError("Upload succeeded but failed to remove old file: " + delEx.Message);
+                    }
+                }
             }
             catch (ApiException ex)
             {
@@ -627,6 +652,7 @@ namespace VRCEMoji
         {
             Authentication.Instance.LogOff();
             SetLoggedOutState();
+            manageView.ShowNotLoggedIn();
         }
 
         private void SetLoggedInState(string displayName)
@@ -634,6 +660,7 @@ namespace VRCEMoji
             loggedLabel.Text = displayName;
             logoff.Visibility = Visibility.Visible;
             loginDot.Fill = (SolidColorBrush)FindResource("StatusSuccessBrush");
+            _manageNeedsRefresh = true;
         }
 
         private void SetLoggedOutState()
@@ -646,6 +673,170 @@ namespace VRCEMoji
         private void Window_ContentRendered(object sender, EventArgs e)
         {
             chromaTypeBox.SelectedIndex = 0;
+        }
+
+        // ══════════════ TAB SWITCHING ══════════════
+
+        private void createTab_Checked(object sender, RoutedEventArgs e)
+        {
+            if (createContent == null || manageView == null) return;
+            createContent.Visibility = Visibility.Visible;
+            manageView.Visibility = Visibility.Collapsed;
+        }
+
+        private async void manageTab_Checked(object sender, RoutedEventArgs e)
+        {
+            if (createContent == null || manageView == null) return;
+            createContent.Visibility = Visibility.Collapsed;
+            manageView.Visibility = Visibility.Visible;
+
+            if (Authentication.Instance.StoredConfig == null)
+            {
+                manageView.ShowNotLoggedIn();
+                return;
+            }
+
+            if (_manageNeedsRefresh || manageView.Visibility == Visibility.Visible)
+            {
+                _manageNeedsRefresh = false;
+                Configuration? config = Authentication.Instance.ApiConfig;
+                if (config != null)
+                {
+                    CustomApiClient apiClient = new();
+                    var fileApi = new EmojiApi.EmojiApi(apiClient, apiClient, config);
+                    await manageView.LoadFilesAsync(fileApi);
+                }
+            }
+        }
+
+        private async void ManageView_FileClicked(ManagedFile file)
+        {
+            var result = await editOverlay.ShowAsync(file);
+
+            Configuration? config = Authentication.Instance.ApiConfig;
+            if (config == null) return;
+
+            CustomApiClient apiClient = new();
+            var fileApi = new EmojiApi.EmojiApi(apiClient, apiClient, config);
+
+            switch (result.Action)
+            {
+                case EditAction.Delete:
+                    await HandleDeleteAsync(fileApi, file);
+                    break;
+
+                case EditAction.Save:
+                    await HandleSaveMetadataAsync(fileApi, file, result);
+                    break;
+
+                case EditAction.ReplaceImage:
+                    HandleReplaceImage(file);
+                    break;
+            }
+        }
+
+        private async Task HandleDeleteAsync(EmojiApi.EmojiApi fileApi, ManagedFile file)
+        {
+            statusOverlay.ShowLoading("Deleting...");
+            try
+            {
+                await Task.Run(() => fileApi.DeleteFile(file.Id));
+                await statusOverlay.ShowSuccess((file.IsSticker ? "Sticker" : "Emoji") + " deleted successfully!");
+                _manageNeedsRefresh = true;
+                await manageView.LoadFilesAsync(fileApi);
+            }
+            catch (ApiException ex)
+            {
+                statusOverlay.Hide();
+                await statusOverlay.ShowError("Failed to delete: " + ex.Message);
+            }
+        }
+
+        private async Task HandleSaveMetadataAsync(EmojiApi.EmojiApi fileApi, ManagedFile file, EditResult editResult)
+        {
+            statusOverlay.ShowLoading("Downloading current image...");
+            try
+            {
+                byte[] imageBytes = await Task.Run(() => fileApi.DownloadFileImage(file.ImageUrl));
+                using var image = SixLabors.ImageSharp.Image.Load<Rgba32>(imageBytes);
+
+                statusOverlay.ShowLoading("Deleting old file...");
+                await Task.Run(() => fileApi.DeleteFile(file.Id));
+
+                statusOverlay.ShowLoading("Re-uploading with updated settings...");
+
+                var tag = file.IsSticker ? "sticker" : (file.IsAnimated ? "emojianimated" : "emoji");
+                var formParams = new Dictionary<string, string> { { "tag", tag } };
+
+                if (file.IsSticker)
+                {
+                    formParams["maskTag"] = file.MaskTag ?? "square";
+                }
+                else
+                {
+                    formParams["frames"] = file.Frames.ToString();
+                    formParams["framesOverTime"] = (editResult.UpdatedFPS ?? file.FramesOverTime).ToString();
+                    formParams["maskTag"] = file.MaskTag ?? "square";
+
+                    if (editResult.UpdatedAnimationStyle != null)
+                    {
+                        var memberInfo = typeof(AnimationStyle).GetMember(editResult.UpdatedAnimationStyle.ToString()!).FirstOrDefault();
+                        var attr = memberInfo?.GetCustomAttributes(typeof(System.Runtime.Serialization.EnumMemberAttribute), false).FirstOrDefault() as System.Runtime.Serialization.EnumMemberAttribute;
+                        formParams["animationStyle"] = attr?.Value ?? "aura";
+                    }
+
+                    if (editResult.UpdatedLoopStyle != null)
+                    {
+                        var memberInfo = typeof(LoopStyle).GetMember(editResult.UpdatedLoopStyle.ToString()!).FirstOrDefault();
+                        var attr = memberInfo?.GetCustomAttributes(typeof(System.Runtime.Serialization.EnumMemberAttribute), false).FirstOrDefault() as System.Runtime.Serialization.EnumMemberAttribute;
+                        formParams["loopStyle"] = attr?.Value ?? "linear";
+                    }
+                }
+
+                var requestOptions = new VRChat.API.Client.RequestOptions();
+                requestOptions.HeaderParameters.Add("Accept", "*/*");
+                requestOptions.FormParameters = formParams;
+                requestOptions.FileParameters = [];
+
+                string fileName = editResult.UpdatedName ?? file.Name;
+                using (System.IO.Stream st = new System.IO.MemoryStream())
+                {
+                    image.SaveAsPng(st);
+                    st.Position = 0;
+                    requestOptions.FileParameters.Add(fileName, st);
+                    requestOptions.Operation = "FilesApi.CreateFile";
+
+                    var authKey = Authentication.Instance.ApiConfig?.GetApiKeyWithPrefix("auth");
+                    if (!string.IsNullOrEmpty(authKey))
+                    {
+                        requestOptions.Cookies.Add(new System.Net.Cookie("auth", authKey));
+                    }
+
+                    CustomApiClient uploadClient = new();
+                    await Task.Run(() => uploadClient.PostEmoji<EmojiFile>("/file/image", requestOptions, Authentication.Instance.ApiConfig));
+                }
+
+                await statusOverlay.ShowSuccess((file.IsSticker ? "Sticker" : "Emoji") + " updated successfully!");
+                _manageNeedsRefresh = true;
+                await manageView.LoadFilesAsync(fileApi);
+            }
+            catch (ApiException ex)
+            {
+                statusOverlay.Hide();
+                await statusOverlay.ShowError("Failed to update: " + ex.Message);
+            }
+            catch (Exception ex)
+            {
+                statusOverlay.Hide();
+                await statusOverlay.ShowError("Failed to update: " + ex.Message);
+            }
+        }
+
+        private void HandleReplaceImage(ManagedFile file)
+        {
+            _pendingReplacementId = file.Id;
+            createTab.IsChecked = true;
+            statusText.Text = "Replacing " + (file.IsSticker ? "sticker" : "emoji") + " — generate and upload a new image";
         }
 
         private void ResetGenerationState(string frameLabel, bool endSliderEnabled,

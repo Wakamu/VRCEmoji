@@ -58,8 +58,27 @@
                            VerticalAlignment="Center" />
             </Border>
 
+            <!-- ══════════════ TAB BAR ══════════════ -->
+            <Border DockPanel.Dock="Top" Height="36"
+                    Background="{StaticResource BackgroundDeepestBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="createTab" Content="Create"
+                                 Style="{StaticResource TabButton}"
+                                 IsChecked="True"
+                                 Checked="createTab_Checked" />
+                    <RadioButton x:Name="manageTab" Content="Manage"
+                                 Style="{StaticResource TabButton}"
+                                 Checked="manageTab_Checked" />
+                </StackPanel>
+            </Border>
+
             <!-- ══════════════ MAIN CONTENT ══════════════ -->
             <Grid>
+                <!-- ═══ CREATE TAB CONTENT ═══ -->
+                <Grid x:Name="createContent">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="280" />
                     <ColumnDefinition Width="*" />
@@ -402,6 +421,10 @@
                         </Border>
                     </DockPanel>
                 </Grid>
+                </Grid>
+
+                <!-- ═══ MANAGE TAB CONTENT ═══ -->
+                <local:ManageView x:Name="manageView" />
             </Grid>
         </DockPanel>
 
@@ -411,5 +434,6 @@
         <overlays:UploadOverlay x:Name="uploadOverlay" />
         <overlays:ReplaceOverlay x:Name="replaceOverlay" />
         <overlays:StatusOverlay x:Name="statusOverlay" />
+        <overlays:EditOverlay x:Name="editOverlay" />
     </Grid>
 </Window>
