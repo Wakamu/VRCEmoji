@@ -127,7 +127,6 @@ namespace VRCEMoji
             upload.IsEnabled = enabled;
             chromaBox.IsEnabled = enabled;
             chromaButton.IsEnabled = enabled;
-            logoff.IsEnabled = enabled;
             ConvertModeBox.IsEnabled = enabled;
         }
 
@@ -663,7 +662,6 @@ namespace VRCEMoji
             this.startSlider.Value = 0;
             this.generate.IsEnabled = false;
             this.chromaBox.IsEnabled = false;
-            this.logoff.IsEnabled = false;
             ConvertModeBox.IsEnabled = false;
             ConvertModeBox.Visibility = convertModeVisibility;
             ConvertModeBox.SelectedItem = defaultMode;
