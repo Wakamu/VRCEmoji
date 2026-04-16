@@ -62,6 +62,68 @@ namespace VRCEMoji.EmojiApi
             return localVarResponse.Data;
         }
 
+        public List<ManagedFile> GetFiles(string? tag = null, int? n = 100, int? offset = 0, int operationIndex = 0)
+        {
+            VRChat.API.Client.RequestOptions localVarRequestOptions = new();
+
+            string[] _contentTypes = [];
+            string[] _accepts = ["application/json"];
+
+            var localVarContentType = VRChat.API.Client.ClientUtils.SelectHeaderContentType(_contentTypes);
+            if (localVarContentType != null)
+            {
+                localVarRequestOptions.HeaderParameters.Add("Content-Type", localVarContentType);
+            }
+
+            var localVarAccept = VRChat.API.Client.ClientUtils.SelectHeaderAccept(_accepts);
+            if (localVarAccept != null)
+            {
+                localVarRequestOptions.HeaderParameters.Add("Accept", localVarAccept);
+            }
+
+            if (n != null)
+            {
+                localVarRequestOptions.QueryParameters.Add(VRChat.API.Client.ClientUtils.ParameterToMultiMap("", "n", n));
+            }
+            if (offset != null)
+            {
+                localVarRequestOptions.QueryParameters.Add(VRChat.API.Client.ClientUtils.ParameterToMultiMap("", "offset", offset));
+            }
+            if (tag != null)
+            {
+                localVarRequestOptions.QueryParameters.Add(VRChat.API.Client.ClientUtils.ParameterToMultiMap("", "tag", tag));
+            }
+
+            localVarRequestOptions.Operation = "FilesApi.GetFiles";
+            localVarRequestOptions.OperationIndex = operationIndex;
+            if (!string.IsNullOrEmpty(this.Configuration.GetApiKeyWithPrefix("auth")))
+            {
+                localVarRequestOptions.Cookies.Add(new Cookie("auth", this.Configuration.GetApiKeyWithPrefix("auth")));
+            }
+            var localVarResponse = this.Client.Get<List<ManagedFile>>("/files", localVarRequestOptions, this.Configuration);
+            if (this.ExceptionFactory != null)
+            {
+                Exception _exception = this.ExceptionFactory("GetFiles", localVarResponse);
+                if (_exception != null)
+                {
+                    throw _exception;
+                }
+            }
+
+            return localVarResponse.Data;
+        }
+
+        public byte[] DownloadFileImage(string url)
+        {
+            using var httpClient = new System.Net.Http.HttpClient();
+            var authCookie = this.Configuration.GetApiKeyWithPrefix("auth");
+            if (!string.IsNullOrEmpty(authCookie))
+            {
+                httpClient.DefaultRequestHeaders.Add("Cookie", "auth=" + authCookie);
+            }
+            return httpClient.GetByteArrayAsync(url).GetAwaiter().GetResult();
+        }
+
         public VRChat.API.Client.ApiResponse<List<EmojiFile>> GetEmojiFilesWithHttpInfo(string type, string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)
         {
             VRChat.API.Client.RequestOptions localVarRequestOptions = new();
