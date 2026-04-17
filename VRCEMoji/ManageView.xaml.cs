@@ -65,6 +65,9 @@ namespace VRCEMoji
 
         public void ShowNotLoggedIn()
         {
+            // Drop the cached API client so the Refresh button can't silently
+            // reach VRChat with a pre-logout Configuration.
+            _fileApi = null;
             _allFiles = null;
             _lastAppliedFilter = null;
             fileGrid.ItemsSource = null;

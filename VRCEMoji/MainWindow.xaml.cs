@@ -491,7 +491,9 @@ namespace VRCEMoji
                 }
                 catch (ApiException)
                 {
-                    Authentication.Instance.LogOff();
+                    // Server already rejected this config — no point in calling
+                    // /logout with a cookie the server just declined.
+                    Authentication.Instance.ClearLocal();
                     config = null;
                     loginError = "Invalid username or password. Please try again.";
                     continue;
@@ -650,7 +652,9 @@ namespace VRCEMoji
 
         private void logoff_Click(object sender, RoutedEventArgs e)
         {
-            Authentication.Instance.LogOff();
+            // Fire-and-forget: UI updates immediately; the best-effort server
+            // /logout call runs in the background with its own 5s cap.
+            _ = Authentication.Instance.LogOffAsync();
             SetLoggedOutState();
             manageView.ShowNotLoggedIn();
         }

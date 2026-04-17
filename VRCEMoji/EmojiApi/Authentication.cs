@@ -100,11 +100,63 @@ namespace VRCEMoji.EmojiApi
             return null;
         }
 
-        public void LogOff()
+        /// <summary>
+        /// Clears all local auth state: deletes the on-disk config file, scrubs
+        /// the in-memory Configuration (cookies + credentials) so any captured
+        /// reference becomes unusable, and nulls the singleton's caches.
+        /// Never performs network IO — safe to call offline or after a rejected
+        /// login.
+        /// </summary>
+        public void ClearLocal()
         {
-            System.IO.File.Delete(this.StoragePath + "\\account.json");
+            try { System.IO.File.Delete(this.StoragePath + "\\account.json"); } catch { }
+            if (_apiConfig != null)
+            {
+                _apiConfig.DefaultHeaders.Remove("Cookie");
+                _apiConfig.Username = "";
+                _apiConfig.Password = "";
+            }
             this._storedConfig = null;
             this._apiConfig = null;
+        }
+
+        /// <summary>
+        /// Logs out locally and, best-effort, invalidates the server-side session.
+        /// The file is deleted and the singleton's refs are cleared BEFORE the
+        /// network call (so a crash mid-call cannot leave credentials on disk).
+        /// The captured Configuration retains its cookies just long enough to
+        /// make the server call, then gets scrubbed — neutralizing any external
+        /// reference that was captured prior to logout. The server call is
+        /// capped at 5s and swallows all errors (offline logout must still work).
+        /// </summary>
+        public async Task LogOffAsync()
+        {
+            var cfg = _apiConfig;
+            try { System.IO.File.Delete(this.StoragePath + "\\account.json"); } catch { }
+            _storedConfig = null;
+            _apiConfig = null;
+
+            if (cfg != null)
+            {
+                try
+                {
+                    var client = new CustomApiClient();
+                    var authApi = new AuthenticationApi(client, client, cfg);
+                    var logoutTask = Task.Run(() => authApi.Logout());
+                    await Task.WhenAny(logoutTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+                }
+                catch { /* best-effort; offline logout must still work */ }
+
+                // Scrub the captured Configuration after the server call so any
+                // external reference is neutralized even if it outlives us.
+                try
+                {
+                    cfg.DefaultHeaders.Remove("Cookie");
+                    cfg.Username = "";
+                    cfg.Password = "";
+                }
+                catch { }
+            }
         }
 
         private void CreateStoredConfig(Configuration config, string auth, string twoKey, string displayName)
