@@ -45,7 +45,10 @@ namespace VRCEMoji.Overlays
             titleText.Text = file.IsSticker ? "Edit Sticker" : "Edit Emoji";
             nameBox.Text = file.Name;
 
-            // Load thumbnail
+            // Stop any existing animation
+            SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, null);
+
+            // Load image
             var bi = new BitmapImage();
             bi.BeginInit();
             bi.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
@@ -54,17 +57,28 @@ namespace VRCEMoji.Overlays
 
             if (file.IsAnimated && file.Frames > 0)
             {
+                // Show animated preview, hide static
+                staticPreviewBorder.Visibility = Visibility.Collapsed;
+                animatedPreviewBorder.Visibility = Visibility.Visible;
+
+                int frames = file.Frames;
+                int columns = (int)Math.Ceiling(Math.Sqrt(frames));
+                int fps = file.FramesOverTime > 0 ? file.FramesOverTime : 8;
+
                 bi.DownloadCompleted += (sender, e) =>
                 {
                     var bmp = (BitmapImage)sender!;
-                    int cropSize = file.Frames > 16 ? 128 : file.Frames > 4 ? 256 : 512;
-                    if (cropSize <= bmp.PixelWidth && cropSize <= bmp.PixelHeight)
-                        previewImage.Source = new CroppedBitmap(bmp, new Int32Rect(0, 0, cropSize, cropSize));
-                    else
-                        previewImage.Source = bmp;
+                    SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, bmp, frames, columns, columns, fps, 80, 80);
                 };
+                spriteBrush.ImageSource = bi;
             }
-            previewImage.Source = bi;
+            else
+            {
+                // Show static preview, hide animated
+                staticPreviewBorder.Visibility = Visibility.Visible;
+                animatedPreviewBorder.Visibility = Visibility.Collapsed;
+                previewImage.Source = bi;
+            }
 
             // Show/hide emoji-specific fields
             bool isEmoji = file.IsEmoji;
@@ -149,6 +163,11 @@ namespace VRCEMoji.Overlays
             return result;
         }
 
+        private void CleanUp()
+        {
+            SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, null);
+        }
+
         private void Save_Click(object sender, RoutedEventArgs e)
         {
             var result = MessageBox.Show(
@@ -159,6 +178,7 @@ namespace VRCEMoji.Overlays
 
             if (result == MessageBoxResult.Yes)
             {
+                CleanUp();
                 Visibility = Visibility.Collapsed;
                 _tcs?.TrySetResult(BuildResult(EditAction.Save));
             }
@@ -174,6 +194,7 @@ namespace VRCEMoji.Overlays
 
             if (result == MessageBoxResult.Yes)
             {
+                CleanUp();
                 Visibility = Visibility.Collapsed;
                 _tcs?.TrySetResult(BuildResult(EditAction.Delete));
             }
@@ -181,18 +202,21 @@ namespace VRCEMoji.Overlays
 
         private void ReplaceImage_Click(object sender, RoutedEventArgs e)
         {
+            CleanUp();
             Visibility = Visibility.Collapsed;
             _tcs?.TrySetResult(BuildResult(EditAction.ReplaceImage));
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
         {
+            CleanUp();
             Visibility = Visibility.Collapsed;
             _tcs?.TrySetResult(BuildResult(EditAction.Cancel));
         }
 
         private void Backdrop_Click(object sender, MouseButtonEventArgs e)
         {
+            CleanUp();
             Visibility = Visibility.Collapsed;
             _tcs?.TrySetResult(BuildResult(EditAction.Cancel));
         }
@@ -201,6 +225,7 @@ namespace VRCEMoji.Overlays
         {
             if (e.Key == Key.Escape)
             {
+                CleanUp();
                 Visibility = Visibility.Collapsed;
                 _tcs?.TrySetResult(BuildResult(EditAction.Cancel));
                 e.Handled = true;

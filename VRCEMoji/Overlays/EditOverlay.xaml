@@ -30,8 +30,9 @@
                            Foreground="{StaticResource TextPrimaryBrush}"
                            Margin="0,0,0,16" />
 
-                <!-- Preview image -->
-                <Border Background="{StaticResource BackgroundDeepestBrush}"
+                <!-- Preview image (static for non-animated) -->
+                <Border x:Name="staticPreviewBorder"
+                        Background="{StaticResource BackgroundDeepestBrush}"
                         BorderBrush="{StaticResource BorderSubtleBrush}"
                         BorderThickness="1" CornerRadius="6"
                         Width="96" Height="96"
@@ -40,6 +41,29 @@
                     <Image x:Name="previewImage"
                            Width="80" Height="80"
                            Stretch="Uniform" />
+                </Border>
+
+                <!-- Animated preview (spritesheet playback) -->
+                <Border x:Name="animatedPreviewBorder"
+                        Background="{StaticResource BackgroundDeepestBrush}"
+                        BorderBrush="{StaticResource BorderSubtleBrush}"
+                        BorderThickness="1" CornerRadius="6"
+                        Width="96" Height="96"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,0,16"
+                        Visibility="Collapsed">
+                    <Rectangle Width="80" Height="80" StrokeThickness="0">
+                        <Rectangle.Fill>
+                            <ImageBrush x:Name="spriteBrush"
+                                        Stretch="UniformToFill"
+                                        AlignmentX="Left"
+                                        AlignmentY="Top">
+                                <ImageBrush.Transform>
+                                    <MatrixTransform x:Name="SpriteSheetOffset" />
+                                </ImageBrush.Transform>
+                            </ImageBrush>
+                        </Rectangle.Fill>
+                    </Rectangle>
                 </Border>
 
                 <!-- Name field -->

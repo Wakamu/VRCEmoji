@@ -57,6 +57,36 @@ namespace VRCEMoji
             }
         }
 
+        public static void SetSpriteSheetFromSource(ImageBrush brush, ImageSource? source, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0)
+        {
+            SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
+            if (behaviour is not null)
+            {
+                behaviours.Remove(behaviour);
+                if (behaviours.Count == 0)
+                {
+                    CompositionTarget.Rendering -= OnUpdate;
+                }
+            }
+            if (source is null)
+            {
+                brush.ImageSource = null;
+                brush.Transform = null;
+                return;
+            }
+
+            brush.Stretch = Stretch.Fill;
+            brush.AlignmentX = AlignmentX.Left;
+            brush.AlignmentY = AlignmentY.Top;
+            brush.ImageSource = source;
+            behaviour = new SpriteSheetBehaviour(brush, frames, rows, columns, displayWidth, displayHeight, fps);
+            behaviours.Add(behaviour);
+            if (behaviours.Count == 1)
+            {
+                CompositionTarget.Rendering += OnUpdate;
+            }
+        }
+
         public static void SetSpriteSheet(ImageBrush brush, Image? image = null, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0) {
             SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
             if (behaviour is not null)
