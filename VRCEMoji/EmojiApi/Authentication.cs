@@ -45,8 +45,7 @@ namespace VRCEMoji.EmojiApi
                     {
                         UserAgent = UserAgent
                     };
-                    config.Username = _storedConfig.Username;
-                    config.Password = _storedConfig.Password;
+                    // Username/Password are not persisted — cookies carry the session.
                     config.DefaultHeaders.Add("Cookie", "auth=" + _storedConfig.Auth + ";twoFactorAuth=" + _storedConfig.TwoKey);
                     _apiConfig = config;
                 }
@@ -93,11 +92,22 @@ namespace VRCEMoji.EmojiApi
 
         private StoredConfig? ReadStoredConfig()
         {
-            if (System.IO.File.Exists(this.StoragePath + "\\account.json"))
+            var path = this.StoragePath + "\\account.json";
+            if (!System.IO.File.Exists(path)) return null;
+
+            var raw = System.IO.File.ReadAllText(path);
+            var config = JsonConvert.DeserializeObject<StoredConfig>(raw);
+            if (config == null) return null;
+
+            // Proactive scrub: pre-upgrade files contained plaintext Username and
+            // Password. Newtonsoft silently ignores unknown fields on deserialize,
+            // so we detect them in the raw JSON and rewrite the file without them.
+            if (raw.Contains("\"Password\"") || raw.Contains("\"Username\""))
             {
-                return JsonConvert.DeserializeObject<StoredConfig>(System.IO.File.ReadAllText(this.StoragePath + "\\account.json"));
+                try { System.IO.File.WriteAllText(path, JsonConvert.SerializeObject(config)); }
+                catch { /* best-effort; leaving plaintext is no worse than before */ }
             }
-            return null;
+            return config;
         }
 
         /// <summary>
@@ -164,8 +174,6 @@ namespace VRCEMoji.EmojiApi
             System.IO.File.Delete(this.StoragePath + "\\account.json");
             StoredConfig storedConfig = new()
             {
-                Username = config.Username,
-                Password = config.Password,
                 Auth = auth,
                 TwoKey = twoKey,
                 DisplayName = displayName
