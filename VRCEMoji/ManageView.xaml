@@ -72,10 +72,11 @@
                                     MouseLeftButtonDown="File_Click">
                                 <StackPanel VerticalAlignment="Center"
                                             HorizontalAlignment="Center">
-                                    <Image Source="{Binding Thumbnail}"
-                                           Width="56" Height="56"
-                                           Stretch="Uniform"
-                                           Margin="0,4,0,4" />
+                                    <Rectangle Width="56" Height="56"
+                                               Margin="0,4,0,4"
+                                               StrokeThickness="0"
+                                               Loaded="Thumb_Loaded"
+                                               Unloaded="Thumb_Unloaded" />
                                     <TextBlock Text="{Binding TypeLabel}"
                                                FontSize="9"
                                                Foreground="{StaticResource TextDisabledBrush}"

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
 using VRCEMoji.EmojiApi;
 
 namespace VRCEMoji
@@ -12,6 +13,10 @@ namespace VRCEMoji
         public ImageSource? Thumbnail { get; set; }
         public string TypeLabel { get; set; } = "";
         public ManagedFile File { get; set; } = null!;
+        public bool IsAnimated { get; set; }
+        public int Frames { get; set; }
+        public int Columns { get; set; }
+        public int FPS { get; set; }
     }
 
     public partial class ManageView : UserControl
@@ -101,38 +106,60 @@ namespace VRCEMoji
             var viewModels = new List<FileViewModel>();
             foreach (var file in filtered)
             {
-                var vm = new FileViewModel
-                {
-                    TypeLabel = file.IsSticker ? "Sticker" : (file.IsAnimated ? "Animated" : "Emoji"),
-                    File = file
-                };
-
                 var bi = new BitmapImage();
                 bi.BeginInit();
                 bi.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
                 bi.UriSource = new Uri(file.ImageUrl);
                 bi.EndInit();
 
-                if (file.IsAnimated)
-                {
-                    int detectedFrames = file.DetectedFrames;
-                    bi.DownloadCompleted += (sender, e) =>
-                    {
-                        var bmp = (BitmapImage)sender!;
-                        int frames = detectedFrames > 0 ? detectedFrames : 16;
-                        int cropSize = frames > 16 ? 128 : frames > 4 ? 256 : 512;
-                        if (cropSize <= bmp.PixelWidth && cropSize <= bmp.PixelHeight)
-                            vm.Thumbnail = new CroppedBitmap(bmp, new System.Windows.Int32Rect(0, 0, cropSize, cropSize));
-                        else
-                            vm.Thumbnail = bmp;
-                    };
-                }
+                int frames = file.DetectedFrames;
+                bool animate = file.IsAnimated && frames > 1;
 
-                vm.Thumbnail = bi;
-                viewModels.Add(vm);
+                viewModels.Add(new FileViewModel
+                {
+                    TypeLabel = file.IsSticker ? "Sticker" : (file.IsAnimated ? "Animated" : "Emoji"),
+                    File = file,
+                    Thumbnail = bi,
+                    IsAnimated = animate,
+                    Frames = animate ? frames : 0,
+                    Columns = animate ? (frames <= 4 ? 2 : frames <= 16 ? 4 : 8) : 0,
+                    FPS = animate ? file.DetectedFPS : 0,
+                });
             }
 
             fileGrid.ItemsSource = viewModels;
+        }
+
+        private void Thumb_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Rectangle rect ||
+                rect.DataContext is not FileViewModel vm) return;
+
+            // Brushes declared in a DataTemplate are frozen by WPF, so construct
+            // a fresh mutable ImageBrush per Rectangle instance.
+            var brush = new ImageBrush
+            {
+                Stretch = Stretch.Uniform,
+                AlignmentX = AlignmentX.Center,
+                AlignmentY = AlignmentY.Center,
+            };
+            rect.Fill = brush;
+
+            if (vm.IsAnimated && vm.Thumbnail != null)
+            {
+                SpriteSheetBehaviour.SetSpriteSheetFromSource(
+                    brush, vm.Thumbnail, vm.Frames, vm.Columns, vm.Columns, vm.FPS, 56, 56);
+            }
+            else
+            {
+                brush.ImageSource = vm.Thumbnail;
+            }
+        }
+
+        private void Thumb_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Rectangle rect || rect.Fill is not ImageBrush brush) return;
+            SpriteSheetBehaviour.SetSpriteSheetFromSource(brush, null);
         }
 
         private void filterBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
