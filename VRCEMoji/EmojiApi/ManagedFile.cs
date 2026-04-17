@@ -40,6 +40,9 @@ namespace VRCEMoji.EmojiApi
         [DataMember(Name = "mimeType", EmitDefaultValue = true)]
         public string MimeType { get; set; } = "";
 
+        // VRChat's /files endpoint returns animated emojis with two separate tags
+        // ["emoji", "animated"] rather than a single "emojianimated" tag — even though
+        // the upload tag we send is "emojianimated". Check for both forms to be safe.
         [JsonIgnore]
         public bool IsEmoji => Tags.Contains("emoji") || Tags.Contains("emojianimated");
 
@@ -47,7 +50,7 @@ namespace VRCEMoji.EmojiApi
         public bool IsSticker => Tags.Contains("sticker");
 
         [JsonIgnore]
-        public bool IsAnimated => Tags.Contains("emojianimated");
+        public bool IsAnimated => Tags.Contains("animated") || Tags.Contains("emojianimated");
 
         /// <summary>
         /// Best-effort frame count: uses API field if available, otherwise parses
