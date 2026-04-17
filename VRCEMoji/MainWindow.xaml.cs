@@ -888,13 +888,24 @@ namespace VRCEMoji
         private void SaveWindowState()
         {
             var state = new { Left, Top, Width, Height, IsMaximized = WindowState == WindowState.Maximized };
-            var path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji", "window.json");
+            var path = System.IO.Path.Combine(EmojiApi.Authentication.StorageDir, "window.json");
             try { System.IO.File.WriteAllText(path, Newtonsoft.Json.JsonConvert.SerializeObject(state)); } catch { }
         }
 
         private void RestoreWindowState()
         {
-            var path = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji", "window.json");
+            var path = System.IO.Path.Combine(EmojiApi.Authentication.StorageDir, "window.json");
+            // One-shot migration: if the new path has nothing yet but the
+            // legacy ProgramData location does, read from there.
+            if (!System.IO.File.Exists(path))
+            {
+                var legacy = System.IO.Path.Combine(EmojiApi.Authentication.LegacyStorageDir, "window.json");
+                if (System.IO.File.Exists(legacy))
+                {
+                    try { System.IO.File.Copy(legacy, path, overwrite: true); } catch { }
+                    try { System.IO.File.Delete(legacy); } catch { }
+                }
+            }
             try
             {
                 dynamic? state = Newtonsoft.Json.JsonConvert.DeserializeObject(System.IO.File.ReadAllText(path));

@@ -1,6 +1,8 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using VRChat.API.Api;
 using VRChat.API.Client;
 using VRChat.API.Model;
@@ -17,7 +19,22 @@ namespace VRCEMoji.EmojiApi
         };
         private static readonly JsonSerializer ParseUserSerializer = JsonSerializer.Create(ParseUserSettings);
 
-        public readonly string StoragePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji");
+        // Per-user, ACL-scoped. Previously we used CommonApplicationData
+        // (C:\ProgramData\VRCEmoji) which is world-readable across local
+        // accounts on the same machine — unsuitable for credentials.
+        public static string StorageDir { get; } =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCEmoji");
+
+        // Legacy world-readable location. Kept for one-shot migration of
+        // existing users. Do not write here.
+        public static string LegacyStorageDir { get; } =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji");
+
+        // DPAPI-encrypted binary file containing the JSON-serialized StoredConfig.
+        private static string AccountDatPath => Path.Combine(StorageDir, "account.dat");
+        // Plaintext JSON file — legacy format, still read for one-shot migration.
+        private static string AccountJsonPath => Path.Combine(StorageDir, "account.json");
+        private static string LegacyAccountJsonPath => Path.Combine(LegacyStorageDir, "account.json");
 
         private StoredConfig? _storedConfig;
 
@@ -31,7 +48,7 @@ namespace VRCEMoji.EmojiApi
         }
 
         private Authentication() {
-            Directory.CreateDirectory(this.StoragePath);
+            Directory.CreateDirectory(StorageDir);
             _storedConfig = ReadStoredConfig();
         }
 
@@ -90,23 +107,62 @@ namespace VRCEMoji.EmojiApi
             }
         }
 
+        // DPAPI is Windows-only, CurrentUser scope. Ties the ciphertext to the
+        // Windows account that wrote it — another local user cannot decrypt.
+        private static byte[] Protect(string plaintext) =>
+            ProtectedData.Protect(Encoding.UTF8.GetBytes(plaintext), null, DataProtectionScope.CurrentUser);
+
+        private static string? Unprotect(byte[] cipher)
+        {
+            try
+            {
+                return Encoding.UTF8.GetString(
+                    ProtectedData.Unprotect(cipher, null, DataProtectionScope.CurrentUser));
+            }
+            catch (CryptographicException)
+            {
+                // Wrong user, corrupted file, or rebuilt profile. Force re-login.
+                return null;
+            }
+        }
+
         private StoredConfig? ReadStoredConfig()
         {
-            var path = this.StoragePath + "\\account.json";
-            if (!System.IO.File.Exists(path)) return null;
+            // 1. Preferred: DPAPI-encrypted account.dat at the per-user path.
+            if (System.IO.File.Exists(AccountDatPath))
+            {
+                var json = Unprotect(System.IO.File.ReadAllBytes(AccountDatPath));
+                if (json == null)
+                {
+                    // Corrupted / wrong user: remove the bad file so we don't loop.
+                    try { System.IO.File.Delete(AccountDatPath); } catch { }
+                    return null;
+                }
+                return JsonConvert.DeserializeObject<StoredConfig>(json);
+            }
 
-            var raw = System.IO.File.ReadAllText(path);
+            // 2. Legacy plaintext JSON at the new per-user path OR the old
+            //    world-readable path. Read whichever exists, then migrate to
+            //    account.dat and delete the legacy file.
+            string? legacyPath = null;
+            if (System.IO.File.Exists(AccountJsonPath)) legacyPath = AccountJsonPath;
+            else if (System.IO.File.Exists(LegacyAccountJsonPath)) legacyPath = LegacyAccountJsonPath;
+
+            if (legacyPath == null) return null;
+
+            var raw = System.IO.File.ReadAllText(legacyPath);
             var config = JsonConvert.DeserializeObject<StoredConfig>(raw);
             if (config == null) return null;
 
-            // Proactive scrub: pre-upgrade files contained plaintext Username and
-            // Password. Newtonsoft silently ignores unknown fields on deserialize,
-            // so we detect them in the raw JSON and rewrite the file without them.
-            if (raw.Contains("\"Password\"") || raw.Contains("\"Username\""))
+            // Migrate: write encrypted, delete legacy. Best-effort; if write
+            // fails we leave the legacy file in place (no data loss).
+            try
             {
-                try { System.IO.File.WriteAllText(path, JsonConvert.SerializeObject(config)); }
-                catch { /* best-effort; leaving plaintext is no worse than before */ }
+                System.IO.File.WriteAllBytes(AccountDatPath, Protect(JsonConvert.SerializeObject(config)));
+                try { System.IO.File.Delete(legacyPath); } catch { }
             }
+            catch { /* keep legacy; next launch will retry */ }
+
             return config;
         }
 
@@ -119,7 +175,7 @@ namespace VRCEMoji.EmojiApi
         /// </summary>
         public void ClearLocal()
         {
-            try { System.IO.File.Delete(this.StoragePath + "\\account.json"); } catch { }
+            DeleteAllStoredFiles();
             if (_apiConfig != null)
             {
                 _apiConfig.DefaultHeaders.Remove("Cookie");
@@ -142,7 +198,7 @@ namespace VRCEMoji.EmojiApi
         public async Task LogOffAsync()
         {
             var cfg = _apiConfig;
-            try { System.IO.File.Delete(this.StoragePath + "\\account.json"); } catch { }
+            DeleteAllStoredFiles();
             _storedConfig = null;
             _apiConfig = null;
 
@@ -171,15 +227,25 @@ namespace VRCEMoji.EmojiApi
 
         private void CreateStoredConfig(Configuration config, string auth, string twoKey, string displayName)
         {
-            System.IO.File.Delete(this.StoragePath + "\\account.json");
+            DeleteAllStoredFiles();
             StoredConfig storedConfig = new()
             {
                 Auth = auth,
                 TwoKey = twoKey,
                 DisplayName = displayName
             };
-            System.IO.File.WriteAllText(this.StoragePath + "\\account.json", JsonConvert.SerializeObject(storedConfig));
+            System.IO.File.WriteAllBytes(AccountDatPath, Protect(JsonConvert.SerializeObject(storedConfig)));
             this._storedConfig = storedConfig;
+        }
+
+        // Deletes every known storage file variant: the current DPAPI-encrypted
+        // account.dat and both legacy plaintext account.json locations. Used on
+        // login (clean slate) and logout.
+        private static void DeleteAllStoredFiles()
+        {
+            try { System.IO.File.Delete(AccountDatPath); } catch { }
+            try { System.IO.File.Delete(AccountJsonPath); } catch { }
+            try { System.IO.File.Delete(LegacyAccountJsonPath); } catch { }
         }
 
         public static bool RequiresEmail2FA(ApiResponse<CurrentUser> resp)
