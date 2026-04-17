@@ -802,6 +802,11 @@ namespace VRCEMoji
                     {
                         requestOptions.Cookies.Add(new System.Net.Cookie("auth", authKey));
                     }
+                    var twoFactorKey = Authentication.Instance.StoredConfig?.TwoKey;
+                    if (!string.IsNullOrEmpty(twoFactorKey))
+                    {
+                        requestOptions.Cookies.Add(new System.Net.Cookie("twoFactorAuth", twoFactorKey));
+                    }
 
                     CustomApiClient uploadClient = new();
                     await Task.Run(() => uploadClient.PostEmoji<EmojiFile>("/file/image", requestOptions, Authentication.Instance.ApiConfig));
