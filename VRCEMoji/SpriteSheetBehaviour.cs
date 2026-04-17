@@ -57,7 +57,7 @@ namespace VRCEMoji
             }
         }
 
-        public static void SetSpriteSheetFromSource(ImageBrush brush, ImageSource? source, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0)
+        private static void DetachBrush(ImageBrush brush)
         {
             SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
             if (behaviour is not null)
@@ -68,18 +68,15 @@ namespace VRCEMoji
                     CompositionTarget.Rendering -= OnUpdate;
                 }
             }
-            if (source is null)
-            {
-                brush.ImageSource = null;
-                brush.Transform = null;
-                return;
-            }
+        }
 
+        private static void AttachBrush(ImageBrush brush, ImageSource source, int frames, int rows, int columns, int fps, int displayWidth, int displayHeight)
+        {
             brush.Stretch = Stretch.Fill;
             brush.AlignmentX = AlignmentX.Left;
             brush.AlignmentY = AlignmentY.Top;
             brush.ImageSource = source;
-            behaviour = new SpriteSheetBehaviour(brush, frames, rows, columns, displayWidth, displayHeight, fps);
+            var behaviour = new SpriteSheetBehaviour(brush, frames, rows, columns, displayWidth, displayHeight, fps);
             behaviours.Add(behaviour);
             if (behaviours.Count == 1)
             {
@@ -87,23 +84,27 @@ namespace VRCEMoji
             }
         }
 
-        public static void SetSpriteSheet(ImageBrush brush, Image? image = null, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0) {
-            SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
-            if (behaviour is not null)
+        public static void SetSpriteSheetFromSource(ImageBrush brush, ImageSource? source, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0)
+        {
+            DetachBrush(brush);
+            if (source is null)
             {
-                behaviours.Remove(behaviour);
-                if (behaviours.Count == 0)
-                {
-                    CompositionTarget.Rendering -= OnUpdate;
-                }
+                brush.ImageSource = null;
+                brush.Transform = null;
+                return;
             }
+            AttachBrush(brush, source, frames, rows, columns, fps, displayWidth, displayHeight);
+        }
+
+        public static void SetSpriteSheet(ImageBrush brush, Image? image = null, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0) {
+            DetachBrush(brush);
             if (image is null)
             {
                 brush.ImageSource = null;
                 brush.Transform = null;
                 return;
             }
-            
+
             using (MemoryStream ms = new())
             {
                 image.Save(ms, PngFormat.Instance);
@@ -112,16 +113,7 @@ namespace VRCEMoji
                 imageSource.StreamSource = ms;
                 imageSource.EndInit();
                 imageSource.Freeze();
-                brush.Stretch = Stretch.Fill;
-                brush.AlignmentX = AlignmentX.Left;
-                brush.AlignmentY = AlignmentY.Top;
-                brush.ImageSource = imageSource; 
-                behaviour = new SpriteSheetBehaviour(brush, frames, rows, columns, displayWidth, displayHeight, fps);
-                behaviours.Add(behaviour);
-            }
-            if (behaviours.Count == 1)
-            {
-                CompositionTarget.Rendering += OnUpdate;
+                AttachBrush(brush, imageSource, frames, rows, columns, fps, displayWidth, displayHeight);
             }
         }
 

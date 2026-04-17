@@ -9,8 +9,6 @@ namespace VRCEMoji
 {
     public class FileViewModel
     {
-        public string Id { get; set; } = "";
-        public string Name { get; set; } = "";
         public ImageSource? Thumbnail { get; set; }
         public string TypeLabel { get; set; } = "";
         public ManagedFile File { get; set; } = null!;
@@ -20,6 +18,7 @@ namespace VRCEMoji
     {
         private List<ManagedFile>? _allFiles;
         private EmojiApi.EmojiApi? _fileApi;
+        private string? _lastAppliedFilter;
 
         public event Action<ManagedFile>? FileClicked;
 
@@ -32,31 +31,22 @@ namespace VRCEMoji
             filterBox.SelectedIndex = 0;
         }
 
-        public void SetApi(EmojiApi.EmojiApi fileApi)
-        {
-            _fileApi = fileApi;
-        }
-
         public async Task LoadFilesAsync(EmojiApi.EmojiApi fileApi)
         {
             _fileApi = fileApi;
+            _lastAppliedFilter = null;
             emptyText.Visibility = Visibility.Collapsed;
             gridScroller.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
 
             try
             {
-                _allFiles = await Task.Run(() =>
-                {
-                    var emojis = fileApi.GetFiles("emoji", 100, 0);
-                    var animatedEmojis = fileApi.GetFiles("emojianimated", 100, 0);
-                    var stickers = fileApi.GetFiles("sticker", 100, 0);
-                    var all = new List<ManagedFile>();
-                    all.AddRange(emojis);
-                    all.AddRange(animatedEmojis);
-                    all.AddRange(stickers);
-                    return all;
-                });
+                var emojiTask = Task.Run(() => fileApi.GetFiles("emoji", 100, 0));
+                var animatedTask = Task.Run(() => fileApi.GetFiles("emojianimated", 100, 0));
+                var stickerTask = Task.Run(() => fileApi.GetFiles("sticker", 100, 0));
+                await Task.WhenAll(emojiTask, animatedTask, stickerTask);
+
+                _allFiles = [.. emojiTask.Result, .. animatedTask.Result, .. stickerTask.Result];
 
                 ApplyFilter();
             }
@@ -71,6 +61,7 @@ namespace VRCEMoji
         public void ShowNotLoggedIn()
         {
             _allFiles = null;
+            _lastAppliedFilter = null;
             fileGrid.ItemsSource = null;
             gridScroller.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Collapsed;
@@ -82,14 +73,17 @@ namespace VRCEMoji
         {
             if (_allFiles == null) return;
 
-            loadingPanel.Visibility = Visibility.Collapsed;
             string filter = (string)filterBox.SelectedItem;
+            if (filter == _lastAppliedFilter && fileGrid.ItemsSource != null) return;
+            _lastAppliedFilter = filter;
+
+            loadingPanel.Visibility = Visibility.Collapsed;
 
             var filtered = filter switch
             {
                 "Emoji" => _allFiles.Where(f => f.IsEmoji).ToList(),
                 "Sticker" => _allFiles.Where(f => f.IsSticker).ToList(),
-                _ => _allFiles
+                _ => _allFiles.ToList()
             };
 
             if (filtered.Count == 0)
@@ -109,8 +103,6 @@ namespace VRCEMoji
             {
                 var vm = new FileViewModel
                 {
-                    Id = file.Id,
-                    Name = file.Name,
                     TypeLabel = file.IsSticker ? "Sticker" : (file.IsAnimated ? "Animated" : "Emoji"),
                     File = file
                 };

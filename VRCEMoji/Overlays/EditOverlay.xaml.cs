@@ -1,4 +1,3 @@
-using System.Runtime.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -29,6 +28,7 @@ namespace VRCEMoji.Overlays
     {
         private TaskCompletionSource<EditResult>? _tcs;
         private ManagedFile? _currentFile;
+        private CancellationTokenSource? _loadCts;
 
         public EditOverlay()
         {
@@ -42,13 +42,15 @@ namespace VRCEMoji.Overlays
             _tcs = new TaskCompletionSource<EditResult>();
             _currentFile = file;
 
+            _loadCts?.Cancel();
+            _loadCts = new CancellationTokenSource();
+            var token = _loadCts.Token;
+
             titleText.Text = file.IsSticker ? "Edit Sticker" : "Edit Emoji";
             nameBox.Text = file.Name;
 
-            // Stop any existing animation
             SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, null);
 
-            // Load image
             var bi = new BitmapImage();
             bi.BeginInit();
             bi.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
@@ -57,7 +59,6 @@ namespace VRCEMoji.Overlays
 
             if (file.IsAnimated && file.Frames > 0)
             {
-                // Show animated preview, hide static
                 staticPreviewBorder.Visibility = Visibility.Collapsed;
                 animatedPreviewBorder.Visibility = Visibility.Visible;
 
@@ -67,6 +68,7 @@ namespace VRCEMoji.Overlays
 
                 bi.DownloadCompleted += (sender, e) =>
                 {
+                    if (token.IsCancellationRequested) return;
                     var bmp = (BitmapImage)sender!;
                     SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, bmp, frames, columns, columns, fps, 80, 80);
                 };
@@ -74,13 +76,11 @@ namespace VRCEMoji.Overlays
             }
             else
             {
-                // Show static preview, hide animated
                 staticPreviewBorder.Visibility = Visibility.Visible;
                 animatedPreviewBorder.Visibility = Visibility.Collapsed;
                 previewImage.Source = bi;
             }
 
-            // Show/hide emoji-specific fields
             bool isEmoji = file.IsEmoji;
             bool isAnimated = file.IsAnimated;
 
@@ -93,39 +93,11 @@ namespace VRCEMoji.Overlays
 
             if (isEmoji)
             {
-                // Try to match current animation style
-                if (file.AnimationStyle != null)
-                {
-                    var matchedStyle = Enum.GetValues(typeof(AnimationStyle)).Cast<AnimationStyle>()
-                        .FirstOrDefault(s =>
-                        {
-                            var memberInfo = typeof(AnimationStyle).GetMember(s.ToString()).FirstOrDefault();
-                            var attr = memberInfo?.GetCustomAttributes(typeof(EnumMemberAttribute), false).FirstOrDefault() as EnumMemberAttribute;
-                            return attr?.Value == file.AnimationStyle;
-                        });
-                    animStyleBox.SelectedItem = matchedStyle;
-                }
-                else
-                {
-                    animStyleBox.SelectedIndex = 0;
-                }
+                animStyleBox.SelectedItem = EnumHelper.FindByMemberValue<AnimationStyle>(file.AnimationStyle)
+                    ?? Enum.GetValues(typeof(AnimationStyle)).Cast<AnimationStyle>().First();
 
-                // Try to match current loop style
-                if (file.LoopStyle != null)
-                {
-                    var matchedLoop = Enum.GetValues(typeof(LoopStyle)).Cast<LoopStyle>()
-                        .FirstOrDefault(s =>
-                        {
-                            var memberInfo = typeof(LoopStyle).GetMember(s.ToString()).FirstOrDefault();
-                            var attr = memberInfo?.GetCustomAttributes(typeof(EnumMemberAttribute), false).FirstOrDefault() as EnumMemberAttribute;
-                            return attr?.Value == file.LoopStyle;
-                        });
-                    loopStyleBox.SelectedItem = matchedLoop;
-                }
-                else
-                {
-                    loopStyleBox.SelectedIndex = 0;
-                }
+                loopStyleBox.SelectedItem = EnumHelper.FindByMemberValue<LoopStyle>(file.LoopStyle)
+                    ?? Enum.GetValues(typeof(LoopStyle)).Cast<LoopStyle>().First();
             }
 
             if (isAnimated)
@@ -163,9 +135,12 @@ namespace VRCEMoji.Overlays
             return result;
         }
 
-        private void CleanUp()
+        private void Dismiss(EditAction action)
         {
+            _loadCts?.Cancel();
             SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, null);
+            Visibility = Visibility.Collapsed;
+            _tcs?.TrySetResult(BuildResult(action));
         }
 
         private void Save_Click(object sender, RoutedEventArgs e)
@@ -177,11 +152,7 @@ namespace VRCEMoji.Overlays
                 MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)
-            {
-                CleanUp();
-                Visibility = Visibility.Collapsed;
-                _tcs?.TrySetResult(BuildResult(EditAction.Save));
-            }
+                Dismiss(EditAction.Save);
         }
 
         private void Delete_Click(object sender, RoutedEventArgs e)
@@ -193,41 +164,20 @@ namespace VRCEMoji.Overlays
                 MessageBoxImage.Warning);
 
             if (result == MessageBoxResult.Yes)
-            {
-                CleanUp();
-                Visibility = Visibility.Collapsed;
-                _tcs?.TrySetResult(BuildResult(EditAction.Delete));
-            }
+                Dismiss(EditAction.Delete);
         }
 
-        private void ReplaceImage_Click(object sender, RoutedEventArgs e)
-        {
-            CleanUp();
-            Visibility = Visibility.Collapsed;
-            _tcs?.TrySetResult(BuildResult(EditAction.ReplaceImage));
-        }
+        private void ReplaceImage_Click(object sender, RoutedEventArgs e) => Dismiss(EditAction.ReplaceImage);
 
-        private void Cancel_Click(object sender, RoutedEventArgs e)
-        {
-            CleanUp();
-            Visibility = Visibility.Collapsed;
-            _tcs?.TrySetResult(BuildResult(EditAction.Cancel));
-        }
+        private void Cancel_Click(object sender, RoutedEventArgs e) => Dismiss(EditAction.Cancel);
 
-        private void Backdrop_Click(object sender, MouseButtonEventArgs e)
-        {
-            CleanUp();
-            Visibility = Visibility.Collapsed;
-            _tcs?.TrySetResult(BuildResult(EditAction.Cancel));
-        }
+        private void Backdrop_Click(object sender, MouseButtonEventArgs e) => Dismiss(EditAction.Cancel);
 
         private void UserControl_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Escape)
             {
-                CleanUp();
-                Visibility = Visibility.Collapsed;
-                _tcs?.TrySetResult(BuildResult(EditAction.Cancel));
+                Dismiss(EditAction.Cancel);
                 e.Handled = true;
             }
         }

@@ -8,6 +8,8 @@ namespace VRCEMoji.EmojiApi
 {
     public class EmojiApi: FilesApi
     {
+        private static readonly System.Net.Http.HttpClient _httpClient = new();
+
         public EmojiApi(VRChat.API.Client.ISynchronousClient client, VRChat.API.Client.IAsynchronousClient asyncClient, VRChat.API.Client.IReadableConfiguration configuration) : base(client, asyncClient, configuration)
         {
         }
@@ -115,13 +117,15 @@ namespace VRCEMoji.EmojiApi
 
         public byte[] DownloadFileImage(string url)
         {
-            using var httpClient = new System.Net.Http.HttpClient();
+            var request = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, url);
             var authCookie = this.Configuration.GetApiKeyWithPrefix("auth");
             if (!string.IsNullOrEmpty(authCookie))
             {
-                httpClient.DefaultRequestHeaders.Add("Cookie", "auth=" + authCookie);
+                request.Headers.Add("Cookie", "auth=" + authCookie);
             }
-            return httpClient.GetByteArrayAsync(url).GetAwaiter().GetResult();
+            var response = _httpClient.SendAsync(request).GetAwaiter().GetResult();
+            response.EnsureSuccessStatusCode();
+            return response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult();
         }
 
         public VRChat.API.Client.ApiResponse<List<EmojiFile>> GetEmojiFilesWithHttpInfo(string type, string userId = default(string), int? n = default(int?), int? offset = default(int?), int operationIndex = 0)

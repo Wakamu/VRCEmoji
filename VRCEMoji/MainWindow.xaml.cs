@@ -696,14 +696,12 @@ namespace VRCEMoji
                 return;
             }
 
-            if (_manageNeedsRefresh || manageView.Visibility == Visibility.Visible)
+            if (_manageNeedsRefresh)
             {
                 _manageNeedsRefresh = false;
-                Configuration? config = Authentication.Instance.ApiConfig;
-                if (config != null)
+                var fileApi = CreateFileApi();
+                if (fileApi != null)
                 {
-                    CustomApiClient apiClient = new();
-                    var fileApi = new EmojiApi.EmojiApi(apiClient, apiClient, config);
                     await manageView.LoadFilesAsync(fileApi);
                 }
             }
@@ -713,11 +711,8 @@ namespace VRCEMoji
         {
             var result = await editOverlay.ShowAsync(file);
 
-            Configuration? config = Authentication.Instance.ApiConfig;
-            if (config == null) return;
-
-            CustomApiClient apiClient = new();
-            var fileApi = new EmojiApi.EmojiApi(apiClient, apiClient, config);
+            var fileApi = CreateFileApi();
+            if (fileApi == null) return;
 
             switch (result.Action)
             {
@@ -780,16 +775,12 @@ namespace VRCEMoji
 
                     if (editResult.UpdatedAnimationStyle != null)
                     {
-                        var memberInfo = typeof(AnimationStyle).GetMember(editResult.UpdatedAnimationStyle.ToString()!).FirstOrDefault();
-                        var attr = memberInfo?.GetCustomAttributes(typeof(System.Runtime.Serialization.EnumMemberAttribute), false).FirstOrDefault() as System.Runtime.Serialization.EnumMemberAttribute;
-                        formParams["animationStyle"] = attr?.Value ?? "aura";
+                        formParams["animationStyle"] = EnumHelper.GetMemberValue(editResult.UpdatedAnimationStyle.Value) ?? "aura";
                     }
 
                     if (editResult.UpdatedLoopStyle != null)
                     {
-                        var memberInfo = typeof(LoopStyle).GetMember(editResult.UpdatedLoopStyle.ToString()!).FirstOrDefault();
-                        var attr = memberInfo?.GetCustomAttributes(typeof(System.Runtime.Serialization.EnumMemberAttribute), false).FirstOrDefault() as System.Runtime.Serialization.EnumMemberAttribute;
-                        formParams["loopStyle"] = attr?.Value ?? "linear";
+                        formParams["loopStyle"] = EnumHelper.GetMemberValue(editResult.UpdatedLoopStyle.Value) ?? "linear";
                     }
                 }
 
@@ -820,11 +811,6 @@ namespace VRCEMoji
                 _manageNeedsRefresh = true;
                 await manageView.LoadFilesAsync(fileApi);
             }
-            catch (ApiException ex)
-            {
-                statusOverlay.Hide();
-                await statusOverlay.ShowError("Failed to update: " + ex.Message);
-            }
             catch (Exception ex)
             {
                 statusOverlay.Hide();
@@ -837,6 +823,14 @@ namespace VRCEMoji
             _pendingReplacementId = file.Id;
             createTab.IsChecked = true;
             statusText.Text = "Replacing " + (file.IsSticker ? "sticker" : "emoji") + " — generate and upload a new image";
+        }
+
+        private EmojiApi.EmojiApi? CreateFileApi()
+        {
+            Configuration? config = Authentication.Instance.ApiConfig;
+            if (config == null) return null;
+            CustomApiClient apiClient = new();
+            return new EmojiApi.EmojiApi(apiClient, apiClient, config);
         }
 
         private void ResetGenerationState(string frameLabel, bool endSliderEnabled,
