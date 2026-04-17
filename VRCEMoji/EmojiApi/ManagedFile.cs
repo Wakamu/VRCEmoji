@@ -1,4 +1,5 @@
 using System.Runtime.Serialization;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 
 namespace VRCEMoji.EmojiApi
@@ -49,9 +50,41 @@ namespace VRCEMoji.EmojiApi
         public bool IsAnimated => Tags.Contains("emojianimated");
 
         /// <summary>
+        /// Best-effort frame count: uses API field if available, otherwise parses
+        /// the filename for the "Xframes" pattern set by this app during upload.
+        /// Returns 0 if neither source provides a count.
+        /// </summary>
+        [JsonIgnore]
+        public int DetectedFrames
+        {
+            get
+            {
+                if (Frames > 0) return Frames;
+                var match = Regex.Match(Name, @"(\d+)frames", RegexOptions.IgnoreCase);
+                return match.Success ? int.Parse(match.Groups[1].Value) : 0;
+            }
+        }
+
+        /// <summary>
+        /// Best-effort FPS: uses API field if available, otherwise parses
+        /// the filename for the "Xfps" pattern. Defaults to 8 if unknown.
+        /// </summary>
+        [JsonIgnore]
+        public int DetectedFPS
+        {
+            get
+            {
+                if (FramesOverTime > 0) return FramesOverTime;
+                var match = Regex.Match(Name, @"(\d+)fps", RegexOptions.IgnoreCase);
+                return match.Success ? int.Parse(match.Groups[1].Value) : 8;
+            }
+        }
+
+        /// <summary>
         /// Returns the URL for the latest version of this file's image.
         /// VRChat file URLs follow the pattern: /file/{id}/{version}/file
-        /// Version 1 is always the initial upload.
+        /// Version 1 is always the initial upload; the app deletes and recreates files
+        /// rather than uploading new versions, so version 1 is always current.
         /// </summary>
         [JsonIgnore]
         public string ImageUrl => $"https://api.vrchat.cloud/api/1/file/{Id}/1/file";

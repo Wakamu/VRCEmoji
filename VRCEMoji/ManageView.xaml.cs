@@ -113,12 +113,14 @@ namespace VRCEMoji
                 bi.UriSource = new Uri(file.ImageUrl);
                 bi.EndInit();
 
-                if (file.Frames > 0 && file.IsAnimated)
+                if (file.IsAnimated)
                 {
+                    int detectedFrames = file.DetectedFrames;
                     bi.DownloadCompleted += (sender, e) =>
                     {
                         var bmp = (BitmapImage)sender!;
-                        int cropSize = file.Frames > 16 ? 128 : file.Frames > 4 ? 256 : 512;
+                        int frames = detectedFrames > 0 ? detectedFrames : 16;
+                        int cropSize = frames > 16 ? 128 : frames > 4 ? 256 : 512;
                         if (cropSize <= bmp.PixelWidth && cropSize <= bmp.PixelHeight)
                             vm.Thumbnail = new CroppedBitmap(bmp, new System.Windows.Int32Rect(0, 0, cropSize, cropSize));
                         else

@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using VRCEMoji.EmojiApi;
 
@@ -57,20 +58,32 @@ namespace VRCEMoji.Overlays
             bi.UriSource = new Uri(file.ImageUrl);
             bi.EndInit();
 
-            if (file.IsAnimated && file.Frames > 0)
+            if (file.IsAnimated)
             {
                 staticPreviewBorder.Visibility = Visibility.Collapsed;
                 animatedPreviewBorder.Visibility = Visibility.Visible;
 
-                int frames = file.Frames;
-                int columns = (int)Math.Ceiling(Math.Sqrt(frames));
-                int fps = file.FramesOverTime > 0 ? file.FramesOverTime : 8;
+                int knownFrames = file.DetectedFrames;
+                int fps = file.DetectedFPS;
 
                 bi.DownloadCompleted += (sender, e) =>
                 {
                     if (token.IsCancellationRequested) return;
                     var bmp = (BitmapImage)sender!;
-                    SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, bmp, frames, columns, columns, fps, 80, 80);
+
+                    int frames = knownFrames;
+                    if (frames <= 0 && bmp.PixelWidth > 0)
+                    {
+                        // Fallback: detect grid from image. VRChat spritesheets are 1024x1024
+                        // with 2x2 (512px cells), 4x4 (256px cells), or 8x8 (128px cells).
+                        frames = DetectFrameCount(bmp);
+                    }
+
+                    if (frames > 1)
+                    {
+                        int columns = frames <= 4 ? 2 : frames <= 16 ? 4 : 8;
+                        SpriteSheetBehaviour.SetSpriteSheetFromSource(spriteBrush, bmp, frames, columns, columns, fps, 80, 80);
+                    }
                 };
                 spriteBrush.ImageSource = bi;
             }
@@ -102,7 +115,7 @@ namespace VRCEMoji.Overlays
 
             if (isAnimated)
             {
-                fpsSlider.Value = file.FramesOverTime > 0 ? file.FramesOverTime : 8;
+                fpsSlider.Value = file.DetectedFPS;
                 fpsValue.Text = ((int)fpsSlider.Value).ToString();
             }
 
@@ -133,6 +146,36 @@ namespace VRCEMoji.Overlays
             }
 
             return result;
+        }
+
+        /// <summary>
+        /// Detects frame count from a 1024x1024 spritesheet by checking pixel alpha
+        /// at cell boundaries. VRChat uses 2x2 (512px), 4x4 (256px), or 8x8 (128px) grids.
+        /// </summary>
+        private static int DetectFrameCount(BitmapImage bmp)
+        {
+            if (bmp.PixelWidth < 256 || bmp.PixelHeight < 256)
+                return 4; // safe default
+
+            // Read a single pixel at a given position to check if it has content
+            bool HasContent(int x, int y)
+            {
+                var cb = new CroppedBitmap(bmp, new Int32Rect(x, y, 1, 1));
+                byte[] pixel = new byte[4];
+                cb.CopyPixels(pixel, 4, 0);
+                return pixel[3] > 10; // alpha > 10 means non-empty
+            }
+
+            // Check the top-left pixel of the 2nd cell in each possible grid.
+            // If content exists at (256, 0), there are more than 4 frames (not just 2x2).
+            // If content exists at (128, 0), there are more than 16 frames (8x8 grid).
+            bool has4x4Content = HasContent(256, 0);
+            if (!has4x4Content) return 4;    // only 2x2 cells have content
+
+            bool has8x8Content = HasContent(128, 0);
+            if (!has8x8Content) return 16;   // 4x4 grid
+
+            return 64;                       // 8x8 grid
         }
 
         private void Dismiss(EditAction action)
