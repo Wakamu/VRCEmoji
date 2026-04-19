@@ -59,7 +59,7 @@
                     </Border>
 
                     <!-- FPS + Loop controls -->
-                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                    <StackPanel x:Name="fpsLoopPanel" Grid.Column="2" VerticalAlignment="Center">
                         <!-- FPS -->
                         <TextBlock Text="FPS"
                                    FontSize="12"
@@ -113,7 +113,8 @@
                           Style="{StaticResource DarkComboBox}"
                           SelectionChanged="styleBox_SelectionChanged"
                           Margin="0,0,0,12" />
-                <Border Background="{StaticResource BackgroundDeepestBrush}"
+                <Border x:Name="stylePreviewBorder"
+                        Background="{StaticResource BackgroundDeepestBrush}"
                         BorderBrush="{StaticResource BorderSubtleBrush}"
                         BorderThickness="1" CornerRadius="6"
                         HorizontalAlignment="Center"

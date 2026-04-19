@@ -25,24 +25,14 @@ namespace VRCEMoji.Overlays
             _tcs = new TaskCompletionSource<(bool, UploadSettings?)>();
             _result = result;
 
-            if (result.GenerationType == GenerationType.Sticker)
-            {
-                fpsSlider.Visibility = Visibility.Collapsed;
-                fpsValue.Visibility = Visibility.Collapsed;
-                styleBox.Visibility = Visibility.Collapsed;
-                stylePreview.Visibility = Visibility.Collapsed;
-                animationLabel.Visibility = Visibility.Collapsed;
-                loopBox.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                fpsSlider.Visibility = Visibility.Visible;
-                fpsValue.Visibility = Visibility.Visible;
-                styleBox.Visibility = Visibility.Visible;
-                stylePreview.Visibility = Visibility.Visible;
-                animationLabel.Visibility = Visibility.Visible;
-                loopBox.Visibility = Visibility.Visible;
-            }
+            var animationVisibility = result.GenerationType == GenerationType.Sticker
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            fpsLoopPanel.Visibility = animationVisibility;
+            animationLabel.Visibility = animationVisibility;
+            styleBox.Visibility = animationVisibility;
+            stylePreviewBorder.Visibility = animationVisibility;
 
             fpsSlider.Value = result.FPS;
             fpsValue.Text = result.FPS.ToString();
