@@ -135,6 +135,45 @@ namespace VRCEMoji
             ConvertModeBox.IsEnabled = enabled;
         }
 
+        /// <summary>
+        /// Returns the rectangle (in canvas coordinates) where the source image actually renders,
+        /// accounting for the Image control's Stretch="Uniform" letterbox/pillarbox layout.
+        /// Returns null when no image is loaded or the canvas has zero size.
+        /// </summary>
+        private Rect? GetImageRenderRect()
+        {
+            if (generationSettings is null) return null;
+            double canvasW = canvas.ActualWidth;
+            double canvasH = canvas.ActualHeight;
+            double frameW = generationSettings.Image.Width;
+            double frameH = generationSettings.Image.Height;
+            if (canvasW <= 0 || canvasH <= 0 || frameW <= 0 || frameH <= 0) return null;
+            double scale = Math.Min(canvasW / frameW, canvasH / frameH);
+            double renderedW = frameW * scale;
+            double renderedH = frameH * scale;
+            return new Rect((canvasW - renderedW) / 2, (canvasH - renderedH) / 2, renderedW, renderedH);
+        }
+
+        /// <summary>
+        /// Converts a point in canvas coordinates to a point in source-image pixel coordinates.
+        /// Clamps to [0, frame.Width] x [0, frame.Height] so drags into the letterbox margin
+        /// resolve to the nearest image edge. Returns (0, 0) if no image is loaded.
+        /// </summary>
+        private System.Windows.Point CanvasToImagePixel(System.Windows.Point canvasPoint)
+        {
+            var render = GetImageRenderRect();
+            if (!render.HasValue || generationSettings is null)
+                return new System.Windows.Point(0, 0);
+            double frameW = generationSettings.Image.Width;
+            double frameH = generationSettings.Image.Height;
+            double scale = render.Value.Width / frameW;
+            double px = (canvasPoint.X - render.Value.X) / scale;
+            double py = (canvasPoint.Y - render.Value.Y) / scale;
+            return new System.Windows.Point(
+                Math.Max(0, Math.Min(px, frameW)),
+                Math.Max(0, Math.Min(py, frameH)));
+        }
+
         private void Canvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (this.chromaPicker && e.ChangedButton == MouseButton.Right)
@@ -144,12 +183,12 @@ namespace VRCEMoji
             }
             if (this.chromaPicker && this.generationSettings != null)
             {
-                System.Windows.Point p = e.GetPosition(canvas);
+                var imgPx = CanvasToImagePixel(e.GetPosition(canvas));
                 int frameIndex = AnimationBehavior.GetAnimator(originalGif)?.CurrentFrameIndex ?? 0;
                 var currentFrame = this.generationSettings.Image.Frames[frameIndex];
-                double cropWRatio = (double)canvas.ActualWidth / currentFrame.Width;
-                double cropHRatio = (double)canvas.ActualHeight / currentFrame.Height;
-                var rgbColor = currentFrame[Math.Min((int)(p.X / cropWRatio), currentFrame.Width - 1), Math.Min((int)(p.Y / cropHRatio), currentFrame.Height - 1)];
+                int sampleX = Math.Min((int)imgPx.X, currentFrame.Width - 1);
+                int sampleY = Math.Min((int)imgPx.Y, currentFrame.Height - 1);
+                var rgbColor = currentFrame[sampleX, sampleY];
                 chromaColor = rgbColor;
                 this.chromaPicker = false;
                 this.chromaButton.Background = new SolidColorBrush(new System.Windows.Media.Color
@@ -290,19 +329,20 @@ namespace VRCEMoji
             generationSettings.Zoom = zoomSlider.Value;
             if (cropBox.IsChecked == true && rect != null)
             {
-                // Scale crop coordinates from actual canvas size to the 256px space
-                // that EmojiGeneration expects
-                double canvasW = canvas.ActualWidth > 0 ? canvas.ActualWidth : 256;
-                double canvasH = canvas.ActualHeight > 0 ? canvas.ActualHeight : 256;
-                double scaleX = 256.0 / canvasW;
-                double scaleY = 256.0 / canvasH;
-                generationSettings.CropSettings = new Rect()
+                // Convert the crop rectangle from canvas coordinates to source-image pixel
+                // coordinates. Read the rect's actual canvas-space top-left rather than
+                // startPoint so drags up-and-left (where startPoint is the bottom-right) also
+                // produce a correct crop.
+                var canvasTL = new System.Windows.Point(Canvas.GetLeft(rect), Canvas.GetTop(rect));
+                var canvasBR = new System.Windows.Point(canvasTL.X + rect.Width, canvasTL.Y + rect.Height);
+                var imgTL = CanvasToImagePixel(canvasTL);
+                var imgBR = CanvasToImagePixel(canvasBR);
+                double cropW = imgBR.X - imgTL.X;
+                double cropH = imgBR.Y - imgTL.Y;
+                if (cropW > 0 && cropH > 0)
                 {
-                    X = startPoint.X * scaleX,
-                    Y = startPoint.Y * scaleY,
-                    Width = rect.Width * scaleX,
-                    Height = rect.Height * scaleY
-                };
+                    generationSettings.CropSettings = new Rect(imgTL.X, imgTL.Y, cropW, cropH);
+                }
             }
             if (chromaBox.IsChecked == true)
             {
@@ -332,12 +372,18 @@ namespace VRCEMoji
                 StrokeDashArray = new DoubleCollection(new double[] { 4, 2 }),
                 StrokeThickness = 2
             };
-            startPoint = new System.Windows.Point(0, 0);
-            Canvas.SetLeft(rect, startPoint.X);
-            Canvas.SetTop(rect, startPoint.Y);
+            // Default the rect to the source image's rendered area inside the canvas, so the
+            // initial selection matches what the user sees rather than the full (possibly
+            // letterboxed) canvas area.
+            var renderRect = GetImageRenderRect() ?? new Rect(0, 0,
+                canvas.ActualWidth > 0 ? canvas.ActualWidth : 256,
+                canvas.ActualHeight > 0 ? canvas.ActualHeight : 256);
+            startPoint = new System.Windows.Point(renderRect.X, renderRect.Y);
+            Canvas.SetLeft(rect, renderRect.X);
+            Canvas.SetTop(rect, renderRect.Y);
             canvas.Children.Add(rect);
-            rect.Width = canvas.ActualWidth > 0 ? canvas.ActualWidth : 256;
-            rect.Height = canvas.ActualHeight > 0 ? canvas.ActualHeight : 256;
+            rect.Width = renderRect.Width;
+            rect.Height = renderRect.Height;
         }
 
         private void cropBox_Unchecked(object sender, RoutedEventArgs e)

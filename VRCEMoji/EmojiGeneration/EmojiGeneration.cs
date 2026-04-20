@@ -46,22 +46,22 @@ namespace VRCEMoji.EmojiGeneration
                     }
                     if (settings.CropSettings != null)
                     {
+                        // CropSettings is in source-image pixel coordinates (produced by
+                        // MainWindow.CanvasToImagePixel).
                         Rect cropSettings = (Rect)settings.CropSettings;
-                        double cropWRatio = (double)256 / frames[i].Width;
-                        double cropHRatio = (double)256 / frames[i].Height;
-
-                        System.Drawing.Rectangle cropRect = new(
-                            new System.Drawing.Point((int)(cropSettings.X / cropWRatio), (int)(cropSettings.Y / cropHRatio)),
-                            new System.Drawing.Size((int)(cropSettings.Width / cropWRatio), (int)(cropSettings.Height / cropHRatio))
+                        var cropRect = new Rectangle(
+                            (int)cropSettings.X,
+                            (int)cropSettings.Y,
+                            (int)cropSettings.Width,
+                            (int)cropSettings.Height
                         );
-                        var empty = new Image<Rgba32>(1024, 1024);
                         var option = new ResizeOptions
                         {
                             Mode = settings.KeepRatio ? SixLabors.ImageSharp.Processing.ResizeMode.Pad : SixLabors.ImageSharp.Processing.ResizeMode.Stretch,
                             Size = new SixLabors.ImageSharp.Size(gridSize, gridSize)
                         };
                         frames[i].Mutate(
-                            i => i.Crop(new Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(option)
+                            i => i.Crop(cropRect).Resize(option)
                         );
                     }
                     else
