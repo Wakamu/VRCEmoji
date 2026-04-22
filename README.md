@@ -43,3 +43,5 @@ VRChat limits the size and number of frames on the spritesheet, depending on the
 - Fluidity: 64 frames at 128x128 pixels.
 
 If you don't know what you are doing, in most cases Fluidity should be the best option.
+
+Contributors: [Matty](https://github.com/matty)
