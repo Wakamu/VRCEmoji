@@ -20,7 +20,13 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - run: dotnet publish VRCEMoji/VRCEMoji.csproj -c Release -r win-x64 --no-self-contained -p:PublishSingleFile=true -p:Version=${{ github.ref_name }} -o publish
+      - name: Set version
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart("v")
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+
+      - run: dotnet publish VRCEMoji/VRCEMoji.csproj -c Release -r win-x64 --no-self-contained -p:PublishSingleFile=true -p:Version=$env:VERSION -o publish
 
       - name: Create release
         env:
