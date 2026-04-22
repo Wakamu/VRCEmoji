@@ -27,19 +27,6 @@ namespace VRCEMoji.EmojiApi
 
         public string Tag { get; set; }
 
-        public string GetEnumMemberAttrValue<T>(T enumVal)
-        {
-            var enumType = typeof(T);
-            var memInfo = enumType.GetMember(enumVal.ToString());
-            var attr = memInfo.FirstOrDefault()?.GetCustomAttributes(false).OfType<EnumMemberAttribute>().FirstOrDefault();
-            if (attr != null)
-            {
-                return attr.Value;
-            }
-
-            return null;
-        }
-
         public CreateEmojiRequest(GenerationResult generationResult, UploadSettings settings) : base()
         {
             AnimationStyle = settings.AnimationStyle;
@@ -71,9 +58,9 @@ namespace VRCEMoji.EmojiApi
                     { "tag", this.Tag },
                     { "frames", this.Frames.ToString() },
                     { "framesOverTime", this.FPS.ToString() },
-                    { "animationStyle", GetEnumMemberAttrValue(this.AnimationStyle) },
+                    { "animationStyle", EnumHelper.GetMemberValue(this.AnimationStyle) ?? "aura" },
                     { "maskTag", this.MaskTag.ToString() },
-                    { "loopStyle", GetEnumMemberAttrValue(this.LoopStyle) }
+                    { "loopStyle", EnumHelper.GetMemberValue(this.LoopStyle) ?? "linear" }
                 };
                 return formParams;
             }

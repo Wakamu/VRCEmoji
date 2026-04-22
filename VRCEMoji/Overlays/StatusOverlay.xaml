@@ -1,0 +1,71 @@
+<UserControl x:Class="VRCEMoji.Overlays.StatusOverlay"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Visibility="Collapsed"
+             PreviewKeyDown="UserControl_PreviewKeyDown">
+    <UserControl.Resources>
+        <Storyboard x:Key="SpinAnimation" RepeatBehavior="Forever">
+            <DoubleAnimation Storyboard.TargetName="spinnerRotation"
+                             Storyboard.TargetProperty="Angle"
+                             From="0" To="360" Duration="0:0:1"/>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Grid>
+        <!-- Backdrop -->
+        <Border Background="#99000000"
+                MouseLeftButtonDown="Backdrop_Click" />
+
+        <!-- Centered card -->
+        <Border Background="{StaticResource BackgroundPanelBrush}"
+                BorderBrush="{StaticResource BorderSubtleBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="32"
+                MinWidth="360" MaxWidth="420"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="60" ShadowDepth="20" Opacity="0.5" />
+            </Border.Effect>
+
+            <StackPanel HorizontalAlignment="Center">
+                <!-- Spinner (visible during loading) -->
+                <Border x:Name="spinnerContainer" Width="40" Height="40" Margin="0,0,0,16"
+                        HorizontalAlignment="Center">
+                    <Border.RenderTransform>
+                        <RotateTransform x:Name="spinnerRotation" CenterX="20" CenterY="20"/>
+                    </Border.RenderTransform>
+                    <Ellipse Width="36" Height="36" StrokeThickness="3"
+                             Stroke="{StaticResource AccentBrush}"
+                             StrokeDashArray="2.5 1.5"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+
+                <!-- Success icon (collapsed by default) -->
+                <TextBlock x:Name="successIcon" Text="✓" FontSize="36"
+                           Foreground="{StaticResource StatusSuccessBrush}"
+                           HorizontalAlignment="Center" Margin="0,0,0,16"
+                           Visibility="Collapsed"/>
+
+                <!-- Error icon (collapsed by default) -->
+                <TextBlock x:Name="errorIcon" Text="✕" FontSize="36"
+                           Foreground="{StaticResource StatusErrorBrush}"
+                           HorizontalAlignment="Center" Margin="0,0,0,16"
+                           Visibility="Collapsed"/>
+
+                <!-- Message -->
+                <TextBlock x:Name="messageText" TextWrapping="Wrap"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           FontSize="13" Foreground="{StaticResource TextPrimaryBrush}"
+                           Margin="0,0,0,24"/>
+
+                <!-- OK button (collapsed during loading) -->
+                <Button x:Name="okButton" Content="OK"
+                        Style="{StaticResource PrimaryButton}"
+                        Click="Ok_Click" Visibility="Collapsed"
+                        HorizontalAlignment="Center" MinWidth="100"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

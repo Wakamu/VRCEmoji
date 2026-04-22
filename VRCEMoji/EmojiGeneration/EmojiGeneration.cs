@@ -1,12 +1,9 @@
-﻿using SixLabors.ImageSharp.ColorSpaces.Conversion;
+using SixLabors.ImageSharp.ColorSpaces.Conversion;
 using SixLabors.ImageSharp.ColorSpaces;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using System.Windows;
-using VRCEmoji.EmojiApi;
-using VRCEMoji.EmojiApi;
-using VRChat.API.Client;
 
 namespace VRCEMoji.EmojiGeneration
 {
@@ -49,22 +46,22 @@ namespace VRCEMoji.EmojiGeneration
                     }
                     if (settings.CropSettings != null)
                     {
+                        // CropSettings is in source-image pixel coordinates (produced by
+                        // MainWindow.CanvasToImagePixel).
                         Rect cropSettings = (Rect)settings.CropSettings;
-                        double cropWRatio = (double)256 / frames[i].Width;
-                        double cropHRatio = (double)256 / frames[i].Height;
-                        
-                        System.Drawing.Rectangle cropRect = new(
-                            new System.Drawing.Point((int)(cropSettings.X / cropWRatio), (int)(cropSettings.Y / cropHRatio)),
-                            new System.Drawing.Size((int)(cropSettings.Width / cropWRatio), (int)(cropSettings.Height / cropHRatio))
+                        var cropRect = new Rectangle(
+                            (int)cropSettings.X,
+                            (int)cropSettings.Y,
+                            (int)cropSettings.Width,
+                            (int)cropSettings.Height
                         );
-                        var empty = new Image<Rgba32>(1024, 1024);
                         var option = new ResizeOptions
                         {
                             Mode = settings.KeepRatio ? SixLabors.ImageSharp.Processing.ResizeMode.Pad : SixLabors.ImageSharp.Processing.ResizeMode.Stretch,
                             Size = new SixLabors.ImageSharp.Size(gridSize, gridSize)
                         };
                         frames[i].Mutate(
-                            i => i.Crop(new Rectangle(cropRect.X, cropRect.Y, cropRect.Width, cropRect.Height)).Resize(option)
+                            i => i.Crop(cropRect).Resize(option)
                         );
                     }
                     else
@@ -111,58 +108,6 @@ namespace VRCEMoji.EmojiGeneration
             SixLabors.ImageSharp.Configuration.Default.MemoryAllocator.ReleaseRetainedResources();
             return new GenerationResult(result, settings.Name, targetFrameCount, settings.FPS, settings.generationType);
 
-        }
-
-        public static AuthResult? UploadEmoji (GenerationResult result)
-        {
-            AuthResult authResult = Authentication.Instance.HandleAuth();
-            if ((!authResult.Success) || authResult.Configuration is null || authResult.CurrentUser is null)
-            {
-                if (authResult.ErrorMessage != null)
-                {
-                    MessageBox.Show(authResult.ErrorMessage);
-                }
-                return null;
-            }
-
-            CustomApiClient client = new();
-            var fileApi = new EmojiApi.EmojiApi(client, client, authResult.Configuration);
-            try
-            {
-                List<EmojiFile> files = result.GenerationType == GenerationType.Emoji ? fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0) : fileApi.GetStickerFiles(authResult.CurrentUser.Id, 100, 0);
-                UploadDialog uploadDialog = new(result)
-                {
-                    Owner = MainWindow.Instance
-                };
-                if (uploadDialog.ShowDialog() == false)
-                {
-                    return authResult;
-                }
-                UploadSettings uploadSettings = uploadDialog.Settings;
-                if (files.Count >= 18)
-                {
-                    ReplaceDialog replaceDialog = new(files)
-                    {
-                        Owner = MainWindow.Instance
-                    };
-                    if (replaceDialog.ShowDialog() == true)
-                    {
-                        fileApi.DeleteFile(replaceDialog.SelectedId);
-                    }
-                    else
-                    {
-                        return authResult;
-                    }
-                }
-                CreateEmojiRequest request = new(result, uploadSettings);
-                fileApi.CreateEmoji(request);
-                MessageBox.Show((result.GenerationType == GenerationType.Emoji ? "Emoji" : "Sticker") + " uploaded successfully!");
-            }
-            catch (ApiException ex)
-            {
-                MessageBox.Show(ex.Message, "Error");
-            }
-            return authResult;
         }
 
         static Image<Rgba32>[] Divise(Image<Rgba32>[] list)

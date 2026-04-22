@@ -13,7 +13,8 @@ namespace VRCEMoji
 
         private readonly ImageBrush brush;
         private DateTime instanceTime;
-        private readonly int frames, rows, columns, width, height;
+        private readonly int frames, rows, columns;
+        private int width, height;
         private int fps;
         private readonly MatrixTransform transform;
         private LoopStyle loopStyle;
@@ -33,6 +34,16 @@ namespace VRCEMoji
             loopStyle = LoopStyle.Linear;
         }
 
+        public static void UpdateDisplaySize(ImageBrush brush, int displayWidth, int displayHeight)
+        {
+            SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
+            if (behaviour is not null)
+            {
+                behaviour.width = displayWidth;
+                behaviour.height = displayHeight;
+            }
+        }
+
         public static void UpdateSpriteSheet(ImageBrush brush, int fps, LoopStyle? loopStyle = null)
         {
             SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
@@ -46,7 +57,8 @@ namespace VRCEMoji
             }
         }
 
-        public static void SetSpriteSheet(ImageBrush brush, Image? image = null, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0) {
+        private static void DetachBrush(ImageBrush brush)
+        {
             SpriteSheetBehaviour? behaviour = behaviours.Find((x) => x.brush == brush);
             if (behaviour is not null)
             {
@@ -56,13 +68,43 @@ namespace VRCEMoji
                     CompositionTarget.Rendering -= OnUpdate;
                 }
             }
+        }
+
+        private static void AttachBrush(ImageBrush brush, ImageSource source, int frames, int rows, int columns, int fps, int displayWidth, int displayHeight)
+        {
+            brush.Stretch = Stretch.Fill;
+            brush.AlignmentX = AlignmentX.Left;
+            brush.AlignmentY = AlignmentY.Top;
+            brush.ImageSource = source;
+            var behaviour = new SpriteSheetBehaviour(brush, frames, rows, columns, displayWidth, displayHeight, fps);
+            behaviours.Add(behaviour);
+            if (behaviours.Count == 1)
+            {
+                CompositionTarget.Rendering += OnUpdate;
+            }
+        }
+
+        public static void SetSpriteSheetFromSource(ImageBrush brush, ImageSource? source, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0)
+        {
+            DetachBrush(brush);
+            if (source is null)
+            {
+                brush.ImageSource = null;
+                brush.Transform = null;
+                return;
+            }
+            AttachBrush(brush, source, frames, rows, columns, fps, displayWidth, displayHeight);
+        }
+
+        public static void SetSpriteSheet(ImageBrush brush, Image? image = null, int frames = 0, int columns = 0, int rows = 0, int fps = 0, int displayWidth = 0, int displayHeight = 0) {
+            DetachBrush(brush);
             if (image is null)
             {
                 brush.ImageSource = null;
                 brush.Transform = null;
                 return;
             }
-            
+
             using (MemoryStream ms = new())
             {
                 image.Save(ms, PngFormat.Instance);
@@ -71,16 +113,7 @@ namespace VRCEMoji
                 imageSource.StreamSource = ms;
                 imageSource.EndInit();
                 imageSource.Freeze();
-                brush.Stretch = Stretch.Fill;
-                brush.AlignmentX = AlignmentX.Left;
-                brush.AlignmentY = AlignmentY.Top;
-                brush.ImageSource = imageSource; 
-                behaviour = new SpriteSheetBehaviour(brush, frames, rows, columns, displayWidth, displayHeight, fps);
-                behaviours.Add(behaviour);
-            }
-            if (behaviours.Count == 1)
-            {
-                CompositionTarget.Rendering += OnUpdate;
+                AttachBrush(brush, imageSource, frames, rows, columns, fps, displayWidth, displayHeight);
             }
         }
 

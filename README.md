@@ -1,6 +1,10 @@
 # VRCEmoji
 Converter tool from Gif to VRC compatible spritesheets for animated emojis
 
+## Screenshots
+
+![Main](screenshots/main.png)
+
 ## Features
 
 | Feature | Supported | Comments |

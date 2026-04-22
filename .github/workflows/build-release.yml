@@ -1,0 +1,25 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - run: dotnet publish VRCEMoji/VRCEMoji.csproj -c Release -r win-x64 --no-self-contained -p:PublishSingleFile=true -o publish
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $short = "${{ github.sha }}".Substring(0, 7)
+          gh release create "build-$short" publish/VRCEMoji.exe --title "VRCEmoji ($short)" --notes "Build from commit ${{ github.sha }}" --latest

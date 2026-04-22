@@ -1,6 +1,8 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using VRChat.API.Api;
 using VRChat.API.Client;
 using VRChat.API.Model;
@@ -9,7 +11,30 @@ namespace VRCEMoji.EmojiApi
 {
     internal sealed class Authentication
     {
-        public readonly string StoragePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji");
+        private const string UserAgent = "VRCEmoji/1.2.0 wakamu";
+
+        private static readonly JsonSerializerSettings ParseUserSettings = new()
+        {
+            Error = (sender, args) => { args.ErrorContext.Handled = true; }
+        };
+        private static readonly JsonSerializer ParseUserSerializer = JsonSerializer.Create(ParseUserSettings);
+
+        // Per-user, ACL-scoped. Previously we used CommonApplicationData
+        // (C:\ProgramData\VRCEmoji) which is world-readable across local
+        // accounts on the same machine — unsuitable for credentials.
+        public static string StorageDir { get; } =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VRCEmoji");
+
+        // Legacy world-readable location. Kept for one-shot migration of
+        // existing users. Do not write here.
+        public static string LegacyStorageDir { get; } =
+            Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "VRCEmoji");
+
+        // DPAPI-encrypted binary file containing the JSON-serialized StoredConfig.
+        private static string AccountDatPath => Path.Combine(StorageDir, "account.dat");
+        // Plaintext JSON file — legacy format, still read for one-shot migration.
+        private static string AccountJsonPath => Path.Combine(StorageDir, "account.json");
+        private static string LegacyAccountJsonPath => Path.Combine(LegacyStorageDir, "account.json");
 
         private StoredConfig? _storedConfig;
 
@@ -23,7 +48,7 @@ namespace VRCEMoji.EmojiApi
         }
 
         private Authentication() {
-            Directory.CreateDirectory(this.StoragePath);
+            Directory.CreateDirectory(StorageDir);
             _storedConfig = ReadStoredConfig();
         }
 
@@ -31,160 +56,199 @@ namespace VRCEMoji.EmojiApi
         {
             get
             {
-                if (_apiConfig is null)
+                if (_apiConfig is null && _storedConfig != null)
                 {
                     Configuration config = new()
                     {
-                        UserAgent = "VRCEmoji/1.2.0 wakamu"
+                        UserAgent = UserAgent
                     };
-                    if (this._storedConfig != null)
-                    {
-                        config.Username = _storedConfig.Username;
-                        config.Password = _storedConfig.Password;
-                        config.DefaultHeaders.Add("Cookie", "auth=" + _storedConfig.Auth + ";twoFactorAuth=" + _storedConfig.TwoKey);
-                        _apiConfig = config;
-                    }
-                    else
-                    {
-                        LoginDialog loginDialog = new() { Owner = MainWindow.Instance };
-                        if (loginDialog.ShowDialog() == true)
-                        {
-                            config.Username = loginDialog.Login;
-                            config.Password = loginDialog.Password;
-                            _apiConfig = config;
-                        }
-                    }
-                    
+                    // Username/Password are not persisted — cookies carry the session.
+                    config.DefaultHeaders.Add("Cookie", "auth=" + _storedConfig.Auth + ";twoFactorAuth=" + _storedConfig.TwoKey);
+                    _apiConfig = config;
                 }
                 return _apiConfig;
             }
         }
 
+        public Configuration CreateConfig(string username, string password)
+        {
+            Configuration config = new()
+            {
+                UserAgent = UserAgent,
+                Username = username,
+                Password = password
+            };
+            _apiConfig = config;
+            return config;
+        }
+
+        public void FinalizeAuth(ApiResponse<CurrentUser> currentUserResp, Configuration config)
+        {
+            var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
+            var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
+            if (authCookie != null && f2aCookie != null)
+            {
+                CreateStoredConfig(config, authCookie.Value, f2aCookie.Value,
+                    ParseUser(currentUserResp)?.DisplayName ?? "null");
+            }
+        }
+
+        public CurrentUser? ParseUser(ApiResponse<CurrentUser> currentUserResp)
+        {
+            var jObj = JObject.Parse(currentUserResp.RawContent);
+            return jObj.ToObject<CurrentUser>(ParseUserSerializer);
+        }
+
         public StoredConfig? StoredConfig
-        { 
-            get { 
+        {
+            get {
                 _storedConfig ??= ReadStoredConfig();
                 return _storedConfig;
             }
         }
 
-        private StoredConfig? ReadStoredConfig()
+        // DPAPI is Windows-only, CurrentUser scope. Ties the ciphertext to the
+        // Windows account that wrote it — another local user cannot decrypt.
+        private static byte[] Protect(string plaintext) =>
+            ProtectedData.Protect(Encoding.UTF8.GetBytes(plaintext), null, DataProtectionScope.CurrentUser);
+
+        private static string? Unprotect(byte[] cipher)
         {
-            if (System.IO.File.Exists(this.StoragePath + "\\account.json"))
+            try
             {
-                return JsonConvert.DeserializeObject<StoredConfig>(System.IO.File.ReadAllText(this.StoragePath + "\\account.json"));
+                return Encoding.UTF8.GetString(
+                    ProtectedData.Unprotect(cipher, null, DataProtectionScope.CurrentUser));
             }
-            return null;
+            catch (CryptographicException)
+            {
+                // Wrong user, corrupted file, or rebuilt profile. Force re-login.
+                return null;
+            }
         }
 
-        public void LogOff()
+        private StoredConfig? ReadStoredConfig()
         {
-            System.IO.File.Delete(this.StoragePath + "\\account.json");
+            // 1. Preferred: DPAPI-encrypted account.dat at the per-user path.
+            if (System.IO.File.Exists(AccountDatPath))
+            {
+                var json = Unprotect(System.IO.File.ReadAllBytes(AccountDatPath));
+                if (json == null)
+                {
+                    // Corrupted / wrong user: remove the bad file so we don't loop.
+                    try { System.IO.File.Delete(AccountDatPath); } catch { }
+                    return null;
+                }
+                return JsonConvert.DeserializeObject<StoredConfig>(json);
+            }
+
+            // 2. Legacy plaintext JSON at the new per-user path OR the old
+            //    world-readable path. Read whichever exists, then migrate to
+            //    account.dat and delete the legacy file.
+            string? legacyPath = null;
+            if (System.IO.File.Exists(AccountJsonPath)) legacyPath = AccountJsonPath;
+            else if (System.IO.File.Exists(LegacyAccountJsonPath)) legacyPath = LegacyAccountJsonPath;
+
+            if (legacyPath == null) return null;
+
+            var raw = System.IO.File.ReadAllText(legacyPath);
+            var config = JsonConvert.DeserializeObject<StoredConfig>(raw);
+            if (config == null) return null;
+
+            // Migrate: write encrypted, delete legacy. Best-effort; if write
+            // fails we leave the legacy file in place (no data loss).
+            try
+            {
+                System.IO.File.WriteAllBytes(AccountDatPath, Protect(JsonConvert.SerializeObject(config)));
+                try { System.IO.File.Delete(legacyPath); } catch { }
+            }
+            catch { /* keep legacy; next launch will retry */ }
+
+            return config;
+        }
+
+        /// <summary>
+        /// Clears all local auth state: deletes the on-disk config file, scrubs
+        /// the in-memory Configuration (cookies + credentials) so any captured
+        /// reference becomes unusable, and nulls the singleton's caches.
+        /// Never performs network IO — safe to call offline or after a rejected
+        /// login.
+        /// </summary>
+        public void ClearLocal()
+        {
+            DeleteAllStoredFiles();
+            if (_apiConfig != null)
+            {
+                _apiConfig.DefaultHeaders.Remove("Cookie");
+                _apiConfig.Username = "";
+                _apiConfig.Password = "";
+            }
             this._storedConfig = null;
             this._apiConfig = null;
         }
 
-        public AuthResult HandleAuth()
+        /// <summary>
+        /// Logs out locally and, best-effort, invalidates the server-side session.
+        /// The file is deleted and the singleton's refs are cleared BEFORE the
+        /// network call (so a crash mid-call cannot leave credentials on disk).
+        /// The captured Configuration retains its cookies just long enough to
+        /// make the server call, then gets scrubbed — neutralizing any external
+        /// reference that was captured prior to logout. The server call is
+        /// capped at 5s and swallows all errors (offline logout must still work).
+        /// </summary>
+        public async Task LogOffAsync()
         {
-            Configuration? config = ApiConfig;
-            AuthResult result = new();
-            if (config == null)
+            var cfg = _apiConfig;
+            DeleteAllStoredFiles();
+            _storedConfig = null;
+            _apiConfig = null;
+
+            if (cfg != null)
             {
-                return result;
-            }
-            bool logged = false;
-            CustomApiClient client = new();
-            AuthenticationApi authApi = new(client, client, config);
-            try
-            {
-                ApiResponse<CurrentUser> currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                bool cancelOperation = false;
-                logged = true;
-                if (!IsAuthed(currentUserResp) && !cancelOperation)
+                try
                 {
-                    if (RequiresEmail2FA(currentUserResp))
-                    {
-                        InputDialog inputDialog = new("Please verify with the OTP code sent to your email.")
-                        {
-                            Owner = MainWindow.Instance
-                        };
-                        if (inputDialog.ShowDialog() == true)
-                        {
-                            authApi.Verify2FAEmailCode(new TwoFactorEmailCode(inputDialog.Answer));
-                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                        }
-                        else
-                        {
-                            cancelOperation = true;
-                        }
-                    }
-                    else
-                    {
-                        InputDialog inputDialog = new("Please verify with your double authentication code.")
-                        {
-                            Owner = MainWindow.Instance
-                        };
-                        if (inputDialog.ShowDialog() == true)
-                        {
-                            authApi.Verify2FA(new TwoFactorAuthCode(inputDialog.Answer));
-                            currentUserResp = authApi.GetCurrentUserWithHttpInfo();
-                        }
-                        else { cancelOperation = true; }
-                    }
+                    var client = new CustomApiClient();
+                    var authApi = new AuthenticationApi(client, client, cfg);
+                    var logoutTask = Task.Run(() => authApi.Logout());
+                    await Task.WhenAny(logoutTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
                 }
-                if (cancelOperation)
+                catch { /* best-effort; offline logout must still work */ }
+
+                // Scrub the captured Configuration after the server call so any
+                // external reference is neutralized even if it outlives us.
+                try
                 {
-                    return result;
+                    cfg.DefaultHeaders.Remove("Cookie");
+                    cfg.Username = "";
+                    cfg.Password = "";
                 }
-                var authCookie = currentUserResp.Cookies.Find(x => x.Name == "auth");
-                var f2aCookie = currentUserResp.Cookies.Find(x => x.Name == "twoFactorAuth");
-                var settings = new JsonSerializerSettings
-                {
-                    Error = (sender, args) =>
-                    {
-                        args.ErrorContext.Handled = true;
-                    }
-                };
-                var serializer = JsonSerializer.Create(settings);
-                var jObj = JObject.Parse(currentUserResp.RawContent);
-                CurrentUser? user = jObj.ToObject<CurrentUser>(serializer);
-                if (user is null) {
-                    return result;
-                }
-                if (authCookie != null && f2aCookie != null)
-                {
-                    var auth = authCookie.Value;
-                    var f2a = f2aCookie.Value;
-                    CreateStoredConfig(config, auth, f2a, user.DisplayName ?? "null");
-                }
-                result.Success = true;
-                result.CurrentUser = user;
-                result.Configuration = config;
-                return result;
-            }
-            catch (ApiException)
-            {
-                result.ErrorMessage = logged ? "An error occured with the two factor authentication." : "Invalid username/password.";
-                return result;
+                catch { }
             }
         }
 
         private void CreateStoredConfig(Configuration config, string auth, string twoKey, string displayName)
         {
-            System.IO.File.Delete(this.StoragePath + "\\account.json");
+            DeleteAllStoredFiles();
             StoredConfig storedConfig = new()
             {
-                Username = config.Username,
-                Password = config.Password,
                 Auth = auth,
                 TwoKey = twoKey,
                 DisplayName = displayName
             };
-            System.IO.File.WriteAllText(this.StoragePath + "\\account.json", JsonConvert.SerializeObject(storedConfig));
+            System.IO.File.WriteAllBytes(AccountDatPath, Protect(JsonConvert.SerializeObject(storedConfig)));
             this._storedConfig = storedConfig;
         }
 
-        static bool RequiresEmail2FA(ApiResponse<CurrentUser> resp)
+        // Deletes every known storage file variant: the current DPAPI-encrypted
+        // account.dat and both legacy plaintext account.json locations. Used on
+        // login (clean slate) and logout.
+        private static void DeleteAllStoredFiles()
+        {
+            try { System.IO.File.Delete(AccountDatPath); } catch { }
+            try { System.IO.File.Delete(AccountJsonPath); } catch { }
+            try { System.IO.File.Delete(LegacyAccountJsonPath); } catch { }
+        }
+
+        public static bool RequiresEmail2FA(ApiResponse<CurrentUser> resp)
         {
             if (resp.RawContent.Contains("emailOtp"))
             {
@@ -194,7 +258,7 @@ namespace VRCEMoji.EmojiApi
             return false;
         }
 
-        static bool IsAuthed(ApiResponse<CurrentUser> resp)
+        public static bool IsAuthed(ApiResponse<CurrentUser> resp)
         {
             if (resp.RawContent.Contains("displayName"))
             {

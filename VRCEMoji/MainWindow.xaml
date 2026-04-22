@@ -1,64 +1,439 @@
-﻿<Window x:Class="VRCEMoji.MainWindow"
+<Window x:Class="VRCEMoji.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:gif="https://github.com/XamlAnimatedGif/XamlAnimatedGif"
+        xmlns:overlays="clr-namespace:VRCEMoji.Overlays"
         xmlns:local="clr-namespace:VRCEMoji"
         mc:Ignorable="d"
-        ResizeMode="NoResize" Title="VRCEmoji" Height="642" Width="500" MinWidth="500" MaxWidth="500" MinHeight="700" MaxHeight="700" Background="#FF484747" ContentRendered="Window_ContentRendered">
+        Title="VRCEmoji" Width="900" Height="650" MinWidth="800" MinHeight="600"
+        Background="{StaticResource BackgroundBaseBrush}"
+        WindowStartupLocation="Manual"
+        ContentRendered="Window_ContentRendered"
+        PreviewKeyDown="Window_PreviewKeyDown"
+        Closing="Window_Closing">
+
     <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="223*"/>
-            <ColumnDefinition Width="266*"/>
-            <ColumnDefinition Width="0*"/>
-        </Grid.ColumnDefinitions>
-        <Button x:Name="open" Content="Open" HorizontalAlignment="Left" Margin="51,86,0,0" VerticalAlignment="Top" Width="108" Click="open_Click" Height="44" Background="#FFC680F9"/>
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="256" Margin="227,86,0,0" VerticalAlignment="Top" Width="256" Grid.ColumnSpan="2"/>
-        <Border BorderBrush="Black" BorderThickness="1" HorizontalAlignment="Left" Height="256" Margin="227,396,0,0" VerticalAlignment="Top" Width="256" Grid.ColumnSpan="2">
-            <Label x:Name="generateLabel" Content="" HorizontalAlignment="Center" Height="104" Margin="0,92,0,0" VerticalAlignment="Top" Width="212" FontSize="36"/>
-        </Border>
-        <Rectangle x:Name="resultRect" HorizontalAlignment="Left" Height="256" Margin="227,396,0,0" Stroke="Black" VerticalAlignment="Top" Width="256" Grid.ColumnSpan="2" StrokeThickness="0">
-            <Rectangle.Fill>
-                <ImageBrush x:Name="resultBrush"
-            Stretch="UniformToFill"
-            AlignmentX="Left" 
-            AlignmentY="Top">
-                    <ImageBrush.Transform>
-                        <MatrixTransform x:Name="SpriteSheetOffset" />
-                    </ImageBrush.Transform>
-                </ImageBrush>
-            </Rectangle.Fill>
-        </Rectangle>
-        <Image x:Name="originalGif" HorizontalAlignment="Left" Height="256" Margin="227,86,0,0" VerticalAlignment="Top" Width="256" MinWidth="256" MinHeight="256" MaxWidth="256" MaxHeight="256" Grid.ColumnSpan="2" Stretch="Fill"/>
-        <Canvas Background="Transparent" Height="256" HorizontalAlignment="Left" VerticalAlignment="Top" Width="256" Margin="227,86,0,0" Name="canvas" MouseDown="Canvas_MouseDown" MouseMove="Canvas_MouseMove" Grid.ColumnSpan="2"/>
-        <Label x:Name="frameCountLabel" Content="" HorizontalAlignment="Left" Height="32" VerticalAlignment="Top" Width="246" Grid.Column="1" Foreground="White" Margin="4,64,0,0"/>
-        <ComboBox x:Name="ConvertModeBox" HorizontalAlignment="Left" Height="22" Margin="54,235,0,0" VerticalAlignment="Top" Width="112" IsEnabled="False"/>
-        <Button x:Name="generate" Content="Generate" HorizontalAlignment="Left" Height="52" Margin="50,416,0,0" VerticalAlignment="Top" Width="108" Click="generate_Click" IsEnabled="False" Background="#FFBF67FF"/>
-        <CheckBox x:Name="cropBox" Content="Crop" HorizontalAlignment="Left" Margin="52,274,0,0" VerticalAlignment="Top" Checked="cropBox_Checked" Unchecked="cropBox_Unchecked" Height="14" Width="54" Foreground="White"/>
-        <CheckBox x:Name="chromaBox" Content="ChromaKey" HorizontalAlignment="Left" Margin="52,324,0,0" VerticalAlignment="Top" Height="14" Width="84" Foreground="White" Checked="chromaBox_Checked" Unchecked="chromaBox_Unchecked" IsEnabled="False"/>
-        <Button x:Name="save" Content="Save" HorizontalAlignment="Left" Height="56" Margin="15,490,0,0" VerticalAlignment="Top" Width="180" Click="save_Click" IsEnabled="False" Background="#FFBF66FF"/>
-        <Slider x:Name="startSlider" HorizontalAlignment="Left" Height="44" Margin="54,142,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="startSlider_ValueChanged" Minimum="1"/>
-        <Slider x:Name="endSlider" HorizontalAlignment="Left" Height="44" Margin="54,184,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="0" SmallChange="0" TickPlacement="TopLeft" IsSnapToTickEnabled="True" ValueChanged="endSlider_ValueChanged" Minimum="1"/>
-        <Label x:Name="label1" Content="Start:" HorizontalAlignment="Left" Height="37" Margin="6,142,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label1_Copy" Content="End:" HorizontalAlignment="Left" Height="37" Margin="5,184,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label1_Copy1" Content="Mode:" HorizontalAlignment="Left" Height="37" Margin="6,233,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
-        <Label x:Name="label2" Content="" HorizontalAlignment="Left" Margin="172,142,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
-        <Label x:Name="label2_Copy" Content="" HorizontalAlignment="Left" Margin="172,185,0,0" VerticalAlignment="Top" Width="37" Foreground="White" Height="26"/>
-        <Slider x:Name="zoomSlider" HorizontalAlignment="Left" Height="27" Margin="54,292,0,0" VerticalAlignment="Top" Width="112" AutoToolTipPlacement="BottomRight" Maximum="1" TickPlacement="TopLeft" TickFrequency="0.1" Value="1" AutoToolTipPrecision="2" Minimum="0.01"/>
-        <Button x:Name="chromaButton" Content="" HorizontalAlignment="Left" Height="25" Margin="142,321,0,0" VerticalAlignment="Top" Width="24" Background="Lime" Foreground="Lime" Click="chromaButton_Click" IsEnabled="False" Visibility="Hidden"/>
-        <Slider x:Name="thresholdSlider" HorizontalAlignment="Left" Height="30" Margin="72,383,0,0" VerticalAlignment="Top" Width="112" Maximum="100" AutoToolTipPlacement="BottomRight" Value="30" SmallChange="1" IsSnapToTickEnabled="True" Visibility="Hidden"/>
-        <Label x:Name="threshold_label" Content="Threshold:" HorizontalAlignment="Left" Height="37" Margin="6,376,0,0" VerticalAlignment="Top" Width="66" Foreground="White" Visibility="Hidden"/>
-        <Button x:Name="upload" Content="Upload" HorizontalAlignment="Left" Height="56" Margin="15,570,0,0" VerticalAlignment="Top" Width="180" Click="upload_Click" IsEnabled="False" Background="#FFBF66FF"/>
-        <Label x:Name="loggedLabel" Content="Not logged in" HorizontalAlignment="Left" Height="28" Margin="6,10,0,0" VerticalAlignment="Top" Width="132" Foreground="White"/>
-        <Button x:Name="logoff" Content="Logout" HorizontalAlignment="Left" Height="28" Margin="143,10,0,0" VerticalAlignment="Top" Width="84" Background="#FFC680F9" Click="logoff_Click" Visibility="Hidden"/>
-        <Label x:Name="chromaTypeLabel" Content="Type:" HorizontalAlignment="Left" Height="28" Margin="6,346,0,0" VerticalAlignment="Top" Width="60" Foreground="White" Visibility="Hidden"/>
-        <ComboBox x:Name="chromaTypeBox" HorizontalAlignment="Left" Height="22" Margin="72,349,0,0" VerticalAlignment="Top" Width="110" Visibility="Hidden"/>
-        <ComboBox x:Name="generationTypeBox" HorizontalAlignment="Left" Margin="46,58,0,0" VerticalAlignment="Top" Width="120" SelectionChanged="generationTypeBox_SelectionChanged"/>
-        <CheckBox x:Name="keepRatio" Content="Keep Ratio" HorizontalAlignment="Left" Margin="129,274,0,0" VerticalAlignment="Top" Height="14" Width="80" Foreground="White"/>
-        <Label x:Name="label1_Copy2" Content="Zoom:" HorizontalAlignment="Left" Height="37" Margin="6,293,0,0" VerticalAlignment="Top" Width="50" Foreground="White"/>
+        <DockPanel>
+            <!-- ══════════════ TITLE BAR ══════════════ -->
+            <Border DockPanel.Dock="Top" Height="32"
+                    Background="{StaticResource BackgroundDeepestBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="12,0">
+                <DockPanel VerticalAlignment="Center">
+                    <!-- Right side: logout button -->
+                    <Button x:Name="logoff" Content="Logout"
+                            Style="{StaticResource SecondaryButton}"
+                            DockPanel.Dock="Right"
+                            Padding="8,2" FontSize="10"
+                            Click="logoff_Click"
+                            Visibility="Collapsed" />
+                    <!-- Login status (clickable) -->
+                    <Border Background="Transparent" Cursor="Hand"
+                            MouseLeftButtonDown="LoginStatus_Click">
+                        <StackPanel Orientation="Horizontal"
+                                    VerticalAlignment="Center">
+                            <Ellipse x:Name="loginDot" Width="8" Height="8"
+                                     Fill="#555555" Margin="0,0,6,0" />
+                            <TextBlock x:Name="loggedLabel" Text="Not logged in"
+                                       FontSize="10"
+                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                </DockPanel>
+            </Border>
 
+            <!-- ══════════════ STATUS BAR ══════════════ -->
+            <Border DockPanel.Dock="Bottom" Height="24"
+                    Background="{StaticResource BackgroundDeepestBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}"
+                    BorderThickness="0,1,0,0"
+                    Padding="12,0">
+                <TextBlock x:Name="statusText" Text="Ready"
+                           FontSize="10"
+                           Foreground="{StaticResource TextDisabledBrush}"
+                           VerticalAlignment="Center" />
+            </Border>
 
+            <!-- ══════════════ TAB BAR ══════════════ -->
+            <Border DockPanel.Dock="Top" Height="36"
+                    Background="{StaticResource BackgroundDeepestBrush}"
+                    BorderBrush="{StaticResource BorderSubtleBrush}"
+                    BorderThickness="0,0,0,1"
+                    Padding="12,0">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <RadioButton x:Name="createTab" Content="Create"
+                                 Style="{StaticResource TabButton}"
+                                 IsChecked="True"
+                                 Checked="createTab_Checked" />
+                    <RadioButton x:Name="manageTab" Content="Manage"
+                                 Style="{StaticResource TabButton}"
+                                 Checked="manageTab_Checked" />
+                </StackPanel>
+            </Border>
 
+            <!-- ══════════════ MAIN CONTENT ══════════════ -->
+            <Grid>
+                <!-- ═══ CREATE TAB CONTENT ═══ -->
+                <Grid x:Name="createContent">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <!-- ─── LEFT PANEL: Controls ─── -->
+                <Border Grid.Column="0"
+                        Background="{StaticResource BackgroundPanelBrush}"
+                        BorderBrush="{StaticResource BorderSubtleBrush}"
+                        BorderThickness="0,0,1,0">
+                    <DockPanel>
+                        <!-- Bottom buttons pinned -->
+                        <StackPanel DockPanel.Dock="Bottom" Margin="12,0,12,12">
+                            <Button x:Name="generate" Content="Generate"
+                                    Style="{StaticResource PrimaryButton}"
+                                    Height="32" Margin="0,0,0,6"
+                                    Click="generate_Click" IsEnabled="False" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="6" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button x:Name="save" Grid.Column="0" Content="Save"
+                                        Style="{StaticResource SecondaryButton}"
+                                        Height="28"
+                                        Click="save_Click" IsEnabled="False" />
+                                <Button x:Name="upload" Grid.Column="2" Content="Upload"
+                                        Style="{StaticResource PrimaryButton}"
+                                        Height="28"
+                                        Click="upload_Click" IsEnabled="False" />
+                            </Grid>
+                        </StackPanel>
+
+                        <!-- Scrollable controls -->
+                        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled"
+                                      Padding="12,8,12,0">
+                            <ScrollViewer.Resources>
+                                <Style TargetType="ScrollBar" BasedOn="{StaticResource DarkScrollBar}"/>
+                            </ScrollViewer.Resources>
+                            <StackPanel>
+                                <!-- Open button -->
+                                <Button x:Name="open" Content="Open Image..."
+                                        Style="{StaticResource PrimaryButton}"
+                                        Height="32" Margin="0,0,0,12"
+                                        Click="open_Click" />
+
+                                <!-- Generation Type -->
+                                <TextBlock Text="Type"
+                                           FontSize="10"
+                                           Foreground="{StaticResource TextSecondaryBrush}"
+                                           Margin="0,0,0,4" />
+                                <ComboBox x:Name="generationTypeBox"
+                                          Style="{StaticResource DarkComboBox}"
+                                          Margin="0,0,0,12"
+                                          SelectionChanged="generationTypeBox_SelectionChanged" />
+
+                                <!-- ═══ FRAMES section ═══ -->
+                                <Border Background="Transparent" Cursor="Hand"
+                                        Margin="0,4,0,6"
+                                        MouseLeftButtonDown="ToggleSection_Click"
+                                        Tag="framesContent">
+                                    <TextBlock x:Name="framesHeader"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBrush}">
+                                        <Run Text="&#x25BC;" /> <Run Text="FRAMES" />
+                                    </TextBlock>
+                                </Border>
+                                <StackPanel x:Name="framesContent" Margin="0,0,0,8">
+                                    <!-- Start -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="30" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="label1" Text="Start:"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center" />
+                                        <Slider x:Name="startSlider" Grid.Column="1"
+                                                Style="{StaticResource DarkSlider}"
+                                                Minimum="1" Maximum="0"
+                                                SmallChange="0"
+                                                IsSnapToTickEnabled="True"
+                                                TickPlacement="None"
+                                                ValueChanged="startSlider_ValueChanged" />
+                                        <TextBlock x:Name="label2" Text=""
+                                                   Grid.Column="2"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Right" />
+                                    </Grid>
+                                    <!-- End -->
+                                    <Grid x:Name="endSliderRow" Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="30" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="label1_Copy" Text="End:"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center" />
+                                        <Slider x:Name="endSlider" Grid.Column="1"
+                                                Style="{StaticResource DarkSlider}"
+                                                Minimum="1" Maximum="0"
+                                                SmallChange="0"
+                                                IsSnapToTickEnabled="True"
+                                                TickPlacement="None"
+                                                ValueChanged="endSlider_ValueChanged" />
+                                        <TextBlock x:Name="label2_Copy" Text=""
+                                                   Grid.Column="2"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Right" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- ═══ GENERATION section ═══ -->
+                                <Border Background="Transparent" Cursor="Hand"
+                                        Margin="0,4,0,6"
+                                        MouseLeftButtonDown="ToggleSection_Click"
+                                        Tag="generationContent">
+                                    <TextBlock x:Name="generationHeader"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource AccentBrush}">
+                                        <Run Text="&#x25BC;" /> <Run Text="GENERATION" />
+                                    </TextBlock>
+                                </Border>
+                                <StackPanel x:Name="generationContent" Margin="0,0,0,8">
+                                    <!-- Mode -->
+                                    <TextBlock x:Name="label1_Copy1" Text="Mode:"
+                                               FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Margin="0,0,0,4" />
+                                    <ComboBox x:Name="ConvertModeBox"
+                                              Style="{StaticResource DarkComboBox}"
+                                              IsEnabled="False"
+                                              Margin="0,0,0,8" />
+                                    <!-- Zoom -->
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="40" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock x:Name="label1_Copy2" Text="Zoom:"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   VerticalAlignment="Center" />
+                                        <Slider x:Name="zoomSlider" Grid.Column="1"
+                                                Style="{StaticResource DarkSlider}"
+                                                Minimum="0.01" Maximum="1" Value="1"
+                                                TickFrequency="0.1"
+                                                AutoToolTipPlacement="BottomRight"
+                                                AutoToolTipPrecision="2" />
+                                    </Grid>
+                                </StackPanel>
+
+                                <!-- ═══ EFFECTS section ═══ -->
+                                <Border Background="Transparent" Cursor="Hand"
+                                        Margin="0,4,0,6"
+                                        MouseLeftButtonDown="ToggleSection_Click"
+                                        Tag="effectsContent">
+                                    <TextBlock x:Name="effectsHeader"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#666666">
+                                        <Run Text="&#x25B6;" /> <Run Text="CROP &amp; ZOOM" />
+                                    </TextBlock>
+                                </Border>
+                                <StackPanel x:Name="effectsContent" Visibility="Collapsed" Margin="0,0,0,8">
+                                    <CheckBox x:Name="cropBox" Content="Crop"
+                                              Style="{StaticResource DarkCheckBox}"
+                                              Margin="0,0,0,4"
+                                              Checked="cropBox_Checked"
+                                              Unchecked="cropBox_Unchecked" />
+                                    <CheckBox x:Name="keepRatio" Content="Keep Ratio"
+                                              Style="{StaticResource DarkCheckBox}"
+                                              Margin="0,0,0,4" />
+                                </StackPanel>
+
+                                <!-- ═══ CHROMA KEY section ═══ -->
+                                <Border Background="Transparent" Cursor="Hand"
+                                        Margin="0,4,0,6"
+                                        MouseLeftButtonDown="ToggleSection_Click"
+                                        Tag="chromaContent">
+                                    <TextBlock x:Name="chromaHeader"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="#666666">
+                                        <Run Text="&#x25B6;" /> <Run Text="CHROMA KEY" />
+                                    </TextBlock>
+                                </Border>
+                                <StackPanel x:Name="chromaContent" Visibility="Collapsed" Margin="0,0,0,8">
+                                    <CheckBox x:Name="chromaBox" Content="Enable ChromaKey"
+                                              Style="{StaticResource DarkCheckBox}"
+                                              Margin="0,0,0,6"
+                                              IsEnabled="False"
+                                              Checked="chromaBox_Checked"
+                                              Unchecked="chromaBox_Unchecked" />
+                                    <Button x:Name="chromaButton" Content=""
+                                            Width="24" Height="24"
+                                            HorizontalAlignment="Left"
+                                            Background="Lime" Foreground="Lime"
+                                            Click="chromaButton_Click"
+                                            IsEnabled="False"
+                                            Visibility="Collapsed"
+                                            Margin="0,0,0,6" />
+                                    <TextBlock x:Name="chromaTypeLabel" Text="Type:"
+                                               FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Visibility="Collapsed"
+                                               Margin="0,0,0,4" />
+                                    <ComboBox x:Name="chromaTypeBox"
+                                              Style="{StaticResource DarkComboBox}"
+                                              Visibility="Collapsed"
+                                              Margin="0,0,0,6" />
+                                    <TextBlock x:Name="threshold_label" Text="Threshold:"
+                                               FontSize="10"
+                                               Foreground="{StaticResource TextSecondaryBrush}"
+                                               Visibility="Collapsed"
+                                               Margin="0,0,0,4" />
+                                    <Grid Visibility="{Binding Visibility, ElementName=threshold_label}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="30" />
+                                        </Grid.ColumnDefinitions>
+                                        <Slider x:Name="thresholdSlider"
+                                                Style="{StaticResource DarkSlider}"
+                                                Maximum="100" Value="30"
+                                                SmallChange="1"
+                                                IsSnapToTickEnabled="True"
+                                                ValueChanged="thresholdSlider_ValueChanged" />
+                                        <TextBlock x:Name="thresholdValue" Text="30"
+                                                   Grid.Column="1"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextPrimaryBrush}"
+                                                   VerticalAlignment="Center"
+                                                   TextAlignment="Right" />
+                                    </Grid>
+                                </StackPanel>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Border>
+
+                <!-- ─── RIGHT PANEL: Previews ─── -->
+                <Grid Grid.Column="1" Margin="12">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="8" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <!-- Source preview -->
+                    <DockPanel Grid.Row="0">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock Text="SOURCE"
+                                       FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="sourceMetadata" Text=""
+                                       FontSize="10"
+                                       Foreground="{StaticResource TextDisabledBrush}"
+                                       DockPanel.Dock="Right"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+                        <Border Background="{StaticResource BackgroundDeepestBrush}"
+                                BorderBrush="{StaticResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                AllowDrop="True"
+                                DragOver="SourcePreview_DragOver"
+                                Drop="SourcePreview_Drop">
+                            <Grid>
+                                <TextBlock x:Name="sourceEmpty"
+                                           Text="Open an image to get started"
+                                           FontSize="11"
+                                           Foreground="{StaticResource TextDisabledBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                                <Image x:Name="originalGif"
+                                       Stretch="Uniform"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center" />
+                                <Canvas Background="Transparent"
+                                        Name="canvas"
+                                        MouseDown="Canvas_MouseDown"
+                                        MouseMove="Canvas_MouseMove" />
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+
+                    <!-- Result preview -->
+                    <DockPanel Grid.Row="2">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <TextBlock Text="RESULT"
+                                       FontSize="11" FontWeight="SemiBold"
+                                       Foreground="{StaticResource AccentBrush}"
+                                       VerticalAlignment="Center" />
+                            <TextBlock x:Name="resultMetadata" Text=""
+                                       FontSize="10"
+                                       Foreground="{StaticResource TextDisabledBrush}"
+                                       DockPanel.Dock="Right"
+                                       VerticalAlignment="Center" />
+                        </DockPanel>
+                        <Border Background="{StaticResource BackgroundDeepestBrush}"
+                                BorderBrush="{StaticResource BorderSubtleBrush}"
+                                BorderThickness="1"
+                                CornerRadius="4">
+                            <Grid>
+                                <TextBlock x:Name="resultEmpty"
+                                           Text="Generate to see result"
+                                           FontSize="11"
+                                           Foreground="{StaticResource TextDisabledBrush}"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                                <Viewbox Stretch="Uniform"
+                                         HorizontalAlignment="Center"
+                                         VerticalAlignment="Center"
+                                         Margin="8">
+                                    <Rectangle x:Name="resultRect"
+                                               Width="256" Height="256"
+                                               StrokeThickness="0">
+                                    <Rectangle.Fill>
+                                        <ImageBrush x:Name="resultBrush"
+                                                    Stretch="UniformToFill"
+                                                    AlignmentX="Left"
+                                                    AlignmentY="Top">
+                                            <ImageBrush.Transform>
+                                                <MatrixTransform x:Name="SpriteSheetOffset" />
+                                            </ImageBrush.Transform>
+                                        </ImageBrush>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+                                </Viewbox>
+                            </Grid>
+                        </Border>
+                    </DockPanel>
+                </Grid>
+                </Grid>
+
+                <!-- ═══ MANAGE TAB CONTENT ═══ -->
+                <local:ManageView x:Name="manageView" />
+            </Grid>
+        </DockPanel>
+
+        <!-- ══════════════ OVERLAY LAYER ══════════════ -->
+        <overlays:LoginOverlay x:Name="loginOverlay" />
+        <overlays:InputOverlay x:Name="inputOverlay" />
+        <overlays:UploadOverlay x:Name="uploadOverlay" />
+        <overlays:ReplaceOverlay x:Name="replaceOverlay" />
+        <overlays:StatusOverlay x:Name="statusOverlay" />
+        <overlays:EditOverlay x:Name="editOverlay" />
     </Grid>
 </Window>
