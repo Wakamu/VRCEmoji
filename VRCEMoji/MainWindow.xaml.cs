@@ -17,6 +17,7 @@ using VRCEmoji.EmojiApi;
 using Configuration = VRChat.API.Client.Configuration;
 using ApiException = VRChat.API.Client.ApiException;
 using VRCEMoji.Overlays;
+using System.Reflection;
 
 namespace VRCEMoji
 {
@@ -36,7 +37,7 @@ namespace VRCEMoji
         public MainWindow()
         {
             InitializeComponent();
-            checkUpdate();
+            CheckUpdate();
             AnimationBehavior.SetCacheFramesInMemory(this.originalGif, true);
             StoredConfig? authConfig = Authentication.Instance.StoredConfig;
             if (authConfig != null)
@@ -53,24 +54,48 @@ namespace VRCEMoji
             RestoreWindowState();
         }
 
-        private async void checkUpdate()
+        private async void CheckUpdate()
         {
-            GitHubClient updateClient = new GitHubClient(new ProductHeaderValue("VRCEmoji"));
             try
             {
-                Release latest = await updateClient.Repository.Release.GetLatest("Wakamu", "VRCEmoji");
-                if (latest.TagName != "v2.0.0")
+                GitHubClient client = new GitHubClient(new ProductHeaderValue("VRCEmoji"));
+
+                Release latest = await client.Repository.Release.GetLatest("Wakamu", "VRCEmoji");
+
+                string latestVersion = latest.TagName.TrimStart('v');
+                string currentVersion = GetCurrentVersion();
+
+                if (Version.Parse(latestVersion) > Version.Parse(currentVersion))
                 {
-                    if (MessageBox.Show("Update available (" + latest.TagName + "). Do you want to download it?", "Update Available!", MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+                    var result = MessageBox.Show(
+                        $"Update available ({latest.TagName}). Do you want to download it?",
+                        "Update Available!",
+                        MessageBoxButton.YesNo
+                    );
+
+                    if (result == MessageBoxResult.Yes)
                     {
-                        string url = "http://github.com/Wakamu/VRCEmoji/releases/latest";
-                        Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = latest.HtmlUrl,
+                            UseShellExecute = true
+                        });
                     }
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                // optional: log ex
             }
+        }
+
+        private string GetCurrentVersion()
+        {
+            return Assembly
+                .GetExecutingAssembly()
+                .GetName()
+                .Version?
+                .ToString();
         }
 
         public static MainWindow? Instance { get { return _instance; } }
