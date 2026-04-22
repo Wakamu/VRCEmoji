@@ -24,4 +24,4 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           $short = "${{ github.sha }}".Substring(0, 7)
-          gh release create "build-$short" publish/VRCEMoji.exe --title "${{ github.ref_name }}" --notes "Build from commit ${{ github.sha }}" --latest
+          gh release create "build-$short" publish/VRCEMoji.exe --title "${{ github.ref_name }}" --notes "Build from commit ${{ github.sha }}" --target "${{ github.ref_name }}" --latest
