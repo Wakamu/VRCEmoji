@@ -658,10 +658,24 @@ namespace VRCEMoji
                 List<EmojiFile> files = generationResult.GenerationType == GenerationType.Emoji
                     ? fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0)
                     : fileApi.GetStickerFiles(authResult.CurrentUser.Id, 100, 0);
-
-                if (files.Count >= 18)
+                var allFiles = Enumerable.Empty<ManagedFile>(); ;
+                if (generationResult.GenerationType == GenerationType.Emoji)
                 {
-                    var replaceResult = await replaceOverlay.ShowAsync(files);
+                    var emojiTask = Task.Run(() => fileApi.GetFiles("emoji", 100, 0));
+                    var animatedTask = Task.Run(() => fileApi.GetFiles("emojianimated", 100, 0));
+                    await Task.WhenAll(emojiTask, animatedTask);
+                    allFiles = [.. emojiTask.Result, .. animatedTask.Result];
+                } else
+                {
+                    var stickerTask = Task.Run(() => fileApi.GetFiles("sticker", 100, 0));
+                    await Task.WhenAll(stickerTask);
+                    allFiles = [.. stickerTask.Result];
+                }
+
+
+                if (allFiles.Count() >= 18)
+                {
+                    var replaceResult = await replaceOverlay.ShowAsync(allFiles.ToList());
                     if (replaceResult.Success)
                     {
                         fileApi.DeleteFile(replaceResult.SelectedId);

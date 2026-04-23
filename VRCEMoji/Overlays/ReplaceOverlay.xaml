@@ -53,9 +53,14 @@
                                     CornerRadius="4"
                                     Cursor="Hand"
                                     MouseLeftButtonDown="Emoji_Click">
-                                <Image Source="{Binding Thumbnail}"
-                                       Stretch="Uniform"
-                                       Margin="4" />
+                                <StackPanel VerticalAlignment="Center"
+                                            HorizontalAlignment="Center">
+                                    <Rectangle Width="56" Height="56"
+                                       Margin="0,4,0,4"
+                                       StrokeThickness="0"
+                                       Loaded="Thumb_Loaded"
+                                       Unloaded="Thumb_Unloaded" />
+                                </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

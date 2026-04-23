@@ -5,6 +5,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using VRCEMoji.EmojiApi;
 using VRCEmoji.EmojiApi;
+using XamlAnimatedGif;
+using System.Windows.Shapes;
 
 namespace VRCEMoji.Overlays
 {
@@ -22,37 +24,35 @@ namespace VRCEMoji.Overlays
 
         public ReplaceOverlay() { InitializeComponent(); }
 
-        public Task<(bool Success, string SelectedId)> ShowAsync(List<EmojiFile> files)
+        public Task<(bool Success, string SelectedId)> ShowAsync(List<ManagedFile> files)
         {
             _tcs = new TaskCompletionSource<(bool, string)>();
             _selectedId = "";
             replaceBtn.IsEnabled = false;
             subtitleText.Text = $"Select an emoji to replace ({files.Count}/18 slots used)";
 
-            var viewModels = new List<EmojiViewModel>();
+            var viewModels = new List<FileViewModel>();
             foreach (var file in files)
             {
-                var vm = new EmojiViewModel { Id = file.Id };
                 var bi = new BitmapImage();
                 bi.BeginInit();
                 bi.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
-                bi.UriSource = new Uri("https://api.vrchat.cloud/api/1/file/" + file.Id + "/1/file");
+                bi.UriSource = new Uri(file.ImageUrl);
                 bi.EndInit();
-
-                if (file.Frames > 0)
+                int frames = file.DetectedFrames;
+                bool animate = file.IsAnimated && frames > 1;
+                var fm = new FileViewModel
                 {
-                    bi.DownloadCompleted += (sender, e) =>
-                    {
-                        var bmp = (BitmapImage)sender!;
-                        int cropSize = file.Frames > 4 ? file.Frames > 16 ? 128 : 256 : 512;
-                        if (cropSize <= bmp.PixelWidth && cropSize <= bmp.PixelHeight)
-                            vm.Thumbnail = new CroppedBitmap(bmp, new Int32Rect(0, 0, cropSize, cropSize));
-                        else
-                            vm.Thumbnail = bmp;
-                    };
-                }
-                vm.Thumbnail = bi;
-                viewModels.Add(vm);
+                    TypeLabel = file.Frames == 0 ? "Sticker" : "Animated",
+                    File = file,
+                    Thumbnail = bi,
+                    IsAnimated = file.IsAnimated,
+                    Frames = animate ? frames : 0,
+                    Columns = animate ? (frames <= 4 ? 2 : frames <= 16 ? 4 : 8) : 0,
+                    FPS = animate ? file.DetectedFPS : 0,
+                };
+
+                viewModels.Add(fm);
             }
 
             emojiGrid.ItemsSource = viewModels;
@@ -60,11 +60,43 @@ namespace VRCEMoji.Overlays
             return _tcs.Task;
         }
 
+        private void Thumb_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Rectangle rect ||
+                rect.DataContext is not FileViewModel vm) return;
+
+            // Brushes declared in a DataTemplate are frozen by WPF, so construct
+            // a fresh mutable ImageBrush per Rectangle instance.
+            var brush = new ImageBrush
+            {
+                Stretch = Stretch.Uniform,
+                AlignmentX = AlignmentX.Center,
+                AlignmentY = AlignmentY.Center,
+            };
+            rect.Fill = brush;
+
+            if (vm.IsAnimated && vm.Thumbnail != null)
+            {
+                SpriteSheetBehaviour.SetSpriteSheetFromSource(
+                    brush, vm.Thumbnail, vm.Frames, vm.Columns, vm.Columns, vm.FPS, 56, 56);
+            }
+            else
+            {
+                brush.ImageSource = vm.Thumbnail;
+            }
+        }
+
+        private void Thumb_Unloaded(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Rectangle rect || rect.Fill is not ImageBrush brush) return;
+            SpriteSheetBehaviour.SetSpriteSheetFromSource(brush, null);
+        }
+
         private void Emoji_Click(object sender, MouseButtonEventArgs e)
         {
             var border = (Border)sender;
-            var vm = (EmojiViewModel)border.DataContext;
-            _selectedId = vm.Id;
+            var vm = (FileViewModel)border.DataContext;
+            _selectedId = vm.File.Id;
 
             if (_previousSelection != null)
             {
