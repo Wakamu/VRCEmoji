@@ -655,6 +655,9 @@ namespace VRCEMoji
             var fileApi = new EmojiApi.EmojiApi(apiClient, apiClient, authResult.Configuration);
             try
             {
+                List<EmojiFile> files = generationResult.GenerationType == GenerationType.Emoji
+                    ? fileApi.GetEmojiFiles(authResult.CurrentUser.Id, 100, 0)
+                    : fileApi.GetStickerFiles(authResult.CurrentUser.Id, 100, 0);
                 var allFiles = Enumerable.Empty<ManagedFile>(); ;
                 if (generationResult.GenerationType == GenerationType.Emoji)
                 {
